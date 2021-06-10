@@ -1,0 +1,9 @@
+#all log files
+*.log
+
+# sensitive
+*.json
+
+# data files
+*.csv
+*.xlsx
