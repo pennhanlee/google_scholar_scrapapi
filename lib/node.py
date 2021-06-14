@@ -10,7 +10,7 @@ class Node:
         self.node_hash = hash(pub_url)
         self.edge_dict = {}
 
-    def add_edge(node_hash):
+    def add_edge(self, node_hash):
         if node in self.edge_dict:
             self.edge_dict[node_hash] += 1
         else:
