@@ -12,9 +12,9 @@ import lib.graphcreator as graphcreator
 import lib.metrics as metrics
 import lib.textminer as textminer
 
-ALLDATA_FILE = "./data/10-06-2021_1604_Computer Vision/alldata.xlsx"
-MAINPUBS_FILE = "./data/10-06-2021_1604_Computer Vision/main_pubs.xlsx"
-SAVEPATH = "./data/10-06-2021_1604_Computer Vision/"
+ALLDATA_FILE = "./data/15-06-2021_1707_Natural Language Processing/alldata.xlsx"
+MAINPUBS_FILE = "./data/15-06-2021_1707_Natural Language Processing/main_pubs.xlsx"
+SAVEPATH = "./data/15-06-2021_1707_Natural Language Processing"
 MIN_YEAR = 2010
 MAX_YEAR = 2020
 
@@ -58,29 +58,31 @@ def create_network_file(node_dict, alldata_df):
 
 def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year):
     clusters = {}
-    linegraph_data_list = []
+    linegraph_data_dict = {}
     no_of_doc = len(alldata_df.index)
     for x in range(0, len(components)):
+        print("Starting analysis on Component " + str(x+1) + "/" + str(len(components)))
         cluster_no = x + 1
         cluster = components[x]
         cluster_df = alldata_df[alldata_df["Title"].isin(cluster)]
         cluster_df.insert(len(cluster_df.columns), "Cluster", cluster_no)
-        cluster_word_dict, cluster_name = textminer.mine_cluster(cluster_df, word_bank, no_of_doc, "Title", "Abstract")
+        cluster_word_dict, cluster_name, raw_word_list = textminer.mine_cluster(cluster_df, word_bank, no_of_doc, "Title", "Abstract")
         if not os.path.exists(SAVEPATH + "/{}".format(cluster_name)):
             os.makedirs(SAVEPATH + "/{}".format(cluster_name))
-        data_path = SAVEPATH + "/{}/{}.xlsx".format(cluster_name)
+        data_path = SAVEPATH + "/{}/{}.xlsx".format(cluster_name, cluster_name)
         linegraph_path = SAVEPATH + "/{}/linegraph.png".format(cluster_name)
         wordcloud_path = SAVEPATH + "/{}/wordcloud.png".format(cluster_name)
-        cluster_words = [[word] * cluster_word_dict[word] for word in cluster_word_dict.keys()]
-        graphcreator.generate_word_cloud(cluster_words, wordcloud_path)
-        linegraph_data = graphcreator.generate_year_linegraph(cluster_df, linegraph_path, min_year, max_year)
-        linegraph_data_list.append(linegraph_data)
         cluster_df.to_excel(data_path, index=False)
         clusters[cluster_name] = cluster_df
+        graphcreator.generate_word_cloud(raw_word_list, wordcloud_path)
+        linegraph_data = graphcreator.generate_year_linegraph(cluster_df, linegraph_path, min_year, max_year)
+        linegraph_data_dict[cluster_name] = linegraph_data
+        print("Completed analysis on Component " + str(x+1) + "/" + str(len(components)) + ": " + cluster_name)
     combined_df = pd.concat(clusters)
     combineddata_path = SAVEPATH + "combined_data.xlsx"
     combined_df.to_excel(combineddata_path, index=False)
-    return clusters, linegraph_data_list
+    
+    return clusters, linegraph_data_dict
 
 
 def create_cluster_sum(clusters_dict, linegraph_data, min_year, max_year):
@@ -90,11 +92,11 @@ def create_cluster_sum(clusters_dict, linegraph_data, min_year, max_year):
     for cluster in clusters_dict:
         cluster_name = cluster
         cluster_df = clusters_dict[cluster]
-        size = len(cluster_df.index())
-        growth = metrics.growth_index(cluster_df, size, min_year, max_year)
+        size = len(cluster_df.index)
+        growth = metrics.growth_index(cluster_df, total_doc, max_year, min_year)
         impact = metrics.impact_index(cluster_df)
-        cluster_type = metrics.get_cluster_type(cluster, year_range)
-        current_cluster = [cluster_name, cluster_type, size, growth, impact]
+        cluster_type = metrics.get_cluster_type(cluster_df, year_range)
+        current_cluster = [cluster_name, cluster_type, size, growth, impact]   #TBH change to cluster type once year is solved
         cluster_summary.append(current_cluster)
 
     col=['Name', 'Type', 'Size', 'Growth Index', 'Impact Index']
@@ -102,16 +104,14 @@ def create_cluster_sum(clusters_dict, linegraph_data, min_year, max_year):
     data_path = SAVEPATH + "/summary.xlsx"
     linegraph_path = SAVEPATH + "/combined_linegraph.png"
     cluster_sum_df.to_excel(data_path, index=False)
-    graphcreator.generate_year_linegraph(linegraph_data, linegraph_path)
+    graphcreator.generate_summary_linegraph(linegraph_data, linegraph_path)
     return cluster_sum_df
-
 
 def create_graph(node_list):
     graph = nx.Graph()
     for node in node_list:
         graph.add_edge(node[0], node[1], weight=node[2])
     return graph
-
 
 def create_clusters(graph):
     # components = girvan_with_modularity(graph)
@@ -138,17 +138,11 @@ def main():
     word_bank = textminer.mine_word_bank(alldata_df, "Title", "Abstract")
     list_of_cluster_df, linegraph_data = create_cluster_indi(components, alldata_df, word_bank, MIN_YEAR, MAX_YEAR)
     create_cluster_sum(list_of_cluster_df, linegraph_data, MIN_YEAR, MAX_YEAR)
-    # create_clustersummary_file(components)
     return None
 
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
 
 
 # def girvan_algo(graph):

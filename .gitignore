@@ -7,3 +7,8 @@
 # data files
 *.csv
 *.xlsx
+
+# png files
+*.png
+
+data/

@@ -12,19 +12,18 @@ def plot_cloud(wordcloud):
 def generate_word_cloud(list_of_words, save_path):
     word_cloud = WordCloud(width=3000, height=2000, random_state=1,
                            background_color="grey", colormap="Pastel1",
-                           collocations=True, stopwords=STOPWORDS).generate(" ".join(list_of_words))
+                           collocations=False, stopwords=STOPWORDS).generate(" ".join(list_of_words))
     word_cloud.to_file(save_path)
     return None
 
 
-def generate_year_linegraph(cluster, save_path, max_year, min_year):
-    cluster = cluster["Year"].value_counts().sort_index(ascending=True)
+def generate_year_linegraph(cluster, save_path, min_year, max_year):
+    # cluster = cluster["Year"].value_counts().sort_index(ascending=True)
     year_range = [x for x in range(min_year, max_year + 1)]
     papers_published = []
     counter = 0
     for x in range(0, (max_year - min_year + 1)):
-        if float(year_range[x]) in cluster.index:
-            counter = counter + cluster[year_range[x]]
+        counter = counter + len(cluster[cluster["Year"] == year_range[x]])
         papers_published.append(counter)
 
     plt.plot(year_range, papers_published, color="red")
