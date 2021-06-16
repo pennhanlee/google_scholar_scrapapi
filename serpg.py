@@ -120,7 +120,7 @@ def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
             for doc in result_list:
                 title = doc["title"]
                 year = extract_year(doc["publication_info"]["summary"])
-                snippet = doc["snippet"] if "snippet" in doc else "Empty",
+                snippet = doc["snippet"] if "snippet" in doc else "Empty"
                 cite_id = doc["inline_links"].get("cited_by").get(
                     "cites_id") if "cited_by" in doc["inline_links"] else "Empty"
                 total_cited = doc["inline_links"].get("cited_by").get(

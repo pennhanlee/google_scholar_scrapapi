@@ -82,7 +82,7 @@ def mine_cluster(cluster, word_bank, total_no_of_doc, *args):
 
     return word_dict, cluster_name, raw_word_list
 
-
+    
 def mine_word_bank(alldata_df, *args):
     words = []
     for index, row in alldata_df.iterrows():

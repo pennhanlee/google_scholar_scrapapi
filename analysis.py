@@ -11,10 +11,11 @@ from lib.node_serpapi import Node
 import lib.graphcreator as graphcreator
 import lib.metrics as metrics
 import lib.textminer as textminer
+import lib.textminer_nlp as textminer_nlp
 
-ALLDATA_FILE = "./data/15-06-2021_1707_Natural Language Processing/alldata.xlsx"
-MAINPUBS_FILE = "./data/15-06-2021_1707_Natural Language Processing/main_pubs.xlsx"
-SAVEPATH = "./data/15-06-2021_1707_Natural Language Processing"
+ALLDATA_FILE = "./data/16-06-2021_1444_Natural Language Processing/alldata.xlsx"
+MAINPUBS_FILE = "./data/16-06-2021_1444_Natural Language Processing/main_pubs.xlsx"
+SAVEPATH = "./data/16-06-2021_1444_Natural Language Processing"
 MIN_YEAR = 2010
 MAX_YEAR = 2020
 
@@ -67,14 +68,17 @@ def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year):
         cluster_df = alldata_df[alldata_df["Title"].isin(cluster)]
         cluster_df.insert(len(cluster_df.columns), "Cluster", cluster_no)
         cluster_word_dict, cluster_name, raw_word_list = textminer.mine_cluster(cluster_df, word_bank, no_of_doc, "Title", "Abstract")
+        cluster_summary = textminer_nlp.create_extractive_summary(cluster_df, 2)
+        print(cluster_name)
+        print(cluster_summary)
         if not os.path.exists(SAVEPATH + "/{}".format(cluster_name)):
             os.makedirs(SAVEPATH + "/{}".format(cluster_name))
         data_path = SAVEPATH + "/{}/{}.xlsx".format(cluster_name, cluster_name)
         linegraph_path = SAVEPATH + "/{}/linegraph.png".format(cluster_name)
         wordcloud_path = SAVEPATH + "/{}/wordcloud.png".format(cluster_name)
-        cluster_df.to_excel(data_path, index=False)
+        # cluster_df.to_excel(data_path, index=False)
         clusters[cluster_name] = cluster_df
-        graphcreator.generate_word_cloud(raw_word_list, wordcloud_path)
+        # graphcreator.generate_word_cloud(raw_word_list, wordcloud_path)
         linegraph_data = graphcreator.generate_year_linegraph(cluster_df, linegraph_path, min_year, max_year)
         linegraph_data_dict[cluster_name] = linegraph_data
         print("Completed analysis on Component " + str(x+1) + "/" + str(len(components)) + ": " + cluster_name)
