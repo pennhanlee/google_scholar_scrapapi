@@ -41,20 +41,35 @@ def create_nodes(alldata_df, mainpubs_df):
 
 def create_network_file(node_dict, alldata_df):
     connected_nodes = []
+    node_in_network = set()
     for node in node_dict.values():
         bib_couple_dict = node.edge_dict
         pub_title = node.title
+        node_in_network.add(pub_title)
         for couple in bib_couple_dict.items():
             couple_id = couple[0]
             couple_pub = alldata_df.loc[alldata_df["Result_id"] == couple_id]
             couple_pub_title = couple_pub.iloc[0]["Title"]
-            edge_weight = couple[1]
-            connected_nodes.append([pub_title, couple_pub_title, edge_weight])
-    col = ['Pub_1', 'Pub_2', 'Weight']
-    excel_df = pd.DataFrame(data=connected_nodes, columns=col)
-    path = SAVEPATH + "network.xlsx"
-    excel_df.to_excel(path, index=False)
-    return connected_nodes
+            if (couple_pub_title in node_in_network):   #To avoid duplication of edges ( A - B and B - A )
+                continue
+            else:
+                edge_weight = couple[1]
+                connected_nodes.append([pub_title, couple_pub_title, edge_weight])
+    col = ['Publication_1', 'Publication_2', 'Weight']
+    network_df = pd.DataFrame(data=connected_nodes, columns=col)
+    network_graph = _create_graph(connected_nodes)
+    components = _create_clusters(network_graph)
+    temp_df_list = []
+    for x in range(0, len(components)):
+        cluster_id = x + 1
+        cluster = components[x]
+        temp_df = network_df[network_df["Publication_1"].isin(cluster)]
+        temp_df.insert(len(temp_df.columns), "Cluster", cluster_id)
+        temp_df_list.append(temp_df)
+    network_df = pd.concat(temp_df_list)
+    path = SAVEPATH + "/network.xlsx"
+    network_df.to_excel(path, index=False)
+    return connected_nodes, components
 
 
 def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year):
@@ -76,14 +91,14 @@ def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year):
         data_path = SAVEPATH + "/{}/{}.xlsx".format(cluster_name, cluster_name)
         linegraph_path = SAVEPATH + "/{}/linegraph.png".format(cluster_name)
         wordcloud_path = SAVEPATH + "/{}/wordcloud.png".format(cluster_name)
-        # cluster_df.to_excel(data_path, index=False)
+        cluster_df.to_excel(data_path, index=False)
         clusters[cluster_name] = cluster_df
         # graphcreator.generate_word_cloud(raw_word_list, wordcloud_path)
         linegraph_data = graphcreator.generate_year_linegraph(cluster_df, linegraph_path, min_year, max_year)
         linegraph_data_dict[cluster_name] = linegraph_data
         print("Completed analysis on Component " + str(x+1) + "/" + str(len(components)) + ": " + cluster_name)
     combined_df = pd.concat(clusters)
-    combineddata_path = SAVEPATH + "combined_data.xlsx"
+    combineddata_path = SAVEPATH + "/combined_data.xlsx"
     combined_df.to_excel(combineddata_path, index=False)
     
     return clusters, linegraph_data_dict
@@ -111,13 +126,13 @@ def create_cluster_sum(clusters_dict, linegraph_data, min_year, max_year):
     graphcreator.generate_summary_linegraph(linegraph_data, linegraph_path)
     return cluster_sum_df
 
-def create_graph(node_list):
+def _create_graph(node_list):
     graph = nx.Graph()
     for node in node_list:
         graph.add_edge(node[0], node[1], weight=node[2])
     return graph
 
-def create_clusters(graph):
+def _create_clusters(graph):
     # components = girvan_with_modularity(graph)
     components = community.greedy_modularity_communities(graph)
     return components
@@ -127,22 +142,37 @@ def main():
     # alldata_file = input("Please provide filepath to alldata.xlsx: ")
     # mainpubs_file = input("Please provide filepath to main_pubs.xlsx: ")
     # savepath = input("Please provide the folder path to save the documents: ")
+    # min_year = input("Please provide the earliest year in the analysis eg: 2010: ")
+    # max_year = input("Please provide the latest year in the analysis eg: 2020: ")
     alldata_file = ALLDATA_FILE
     mainpubs_file = MAINPUBS_FILE
     savepath = SAVEPATH
+    min_year = MIN_YEAR
+    max_year = MAX_YEAR
     alldata_df = pd.read_excel(alldata_file)
     mainpubs_df = pd.read_excel(mainpubs_file)
 
     node_dict = create_nodes(alldata_df, mainpubs_df)
-    connected_nodes_list = create_network_file(node_dict, alldata_df)
-
-    network_graph = create_graph(connected_nodes_list)
-    components = create_clusters(network_graph)
+    connected_nodes_list, components = create_network_file(node_dict, alldata_df)
 
     word_bank = textminer.mine_word_bank(alldata_df, "Title", "Abstract")
-    list_of_cluster_df, linegraph_data = create_cluster_indi(components, alldata_df, word_bank, MIN_YEAR, MAX_YEAR)
-    create_cluster_sum(list_of_cluster_df, linegraph_data, MIN_YEAR, MAX_YEAR)
+    list_of_cluster_df, linegraph_data = create_cluster_indi(components, alldata_df, word_bank, min_year, max_year)
+    create_cluster_sum(list_of_cluster_df, linegraph_data, min_year, max_year)
     return None
+
+def start_analysis(alldata_file, mainpubs_file, savepath, min_year, max_year):
+    min_year = int(min_year)
+    max_year = int(max_year)
+    alldata_df = pd.read_excel(alldata_file)
+    mainpubs_df = pd.read_excel(mainpubs_file)
+
+    node_dict = create_nodes(alldata_df, mainpubs_df)
+    connected_nodes_list, components = create_network_file(node_dict, alldata_df)
+
+    word_bank = textminer.mine_word_bank(alldata_df, "Title", "Abstract")
+    list_of_cluster_df, linegraph_data = create_cluster_indi(components, alldata_df, word_bank, min_year, max_year)
+    create_cluster_sum(list_of_cluster_df, linegraph_data, min_year, max_year)
+    return 0
 
 
 if __name__ == "__main__":

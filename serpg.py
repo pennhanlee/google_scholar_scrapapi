@@ -51,48 +51,28 @@ def retrieve_docs(topic, min_year, max_year, limit, citation_limit, key):
                 result_id = entry["result_id"]
 
                 node_data, citing_result_id = retrieve_citing_pub(cites_id,
-                                                                min_year, max_year,
-                                                                citation_limit, key)
+                                                                  min_year, max_year,
+                                                                  citation_limit, key)
 
-                alldata_df_entry = [title, year, snippet, cites_id, total_cites, result_id]
-                main_df_entry = [title, year, snippet, cites_id, total_cites, 
-                                result_id, "Main_Pub", citing_result_id]
+                alldata_df_entry = [title, year, snippet,
+                                    cites_id, total_cites, result_id]
+                main_df_entry = [title, year, snippet, cites_id, total_cites,
+                                 result_id, "Main_Pub", citing_result_id]
 
                 main_data_df.loc[len(main_data_df.index)] = main_df_entry
                 if (alldata_df.loc[(alldata_df['Result_id'] == result_id)].empty):
                     alldata_df.loc[len(alldata_df.index)] = alldata_df_entry
                 alldata_df = add_to_df(alldata_df, node_data)
             total_retrieved += len(result_list)
-        else: 
+        else:
             break
 
-    alldata_path = SAVE_PATH + "alldata.xlsx"
+    alldata_path = SAVE_PATH + "/alldata.xlsx"
     alldata_df.to_excel(alldata_path, index=False)
-    mainpub_path = SAVE_PATH + "main_pubs.xlsx"
+    mainpub_path = SAVE_PATH + "/main_pubs.xlsx"
     main_data_df.to_excel(mainpub_path, index=False)
 
     return alldata_df, main_data_df
-
-
-def extract_year(string):
-    match = re.search(r'\b(19|20)\d{2}(?=[ ])(?![^ ])\b', string)
-    if match:
-        return int(match.group())
-    else:
-        return 0
-
-
-def add_to_df(df, pub_list):
-    for pub in pub_list:
-        if (df.loc[(df['Result_id'] == pub.result_id)].empty):  # avoiding duplicates
-            df_entry = [pub.title,
-                        pub.year,
-                        pub.abstract,
-                        pub.cite_id,
-                        pub.cite_count,
-                        pub.result_id]
-            df.loc[len(df.index)] = df_entry
-    return df
 
 
 def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
@@ -131,10 +111,31 @@ def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
                 node_data.append(node)
                 result_id_list.append(result_id)
             total_retrieved += len(results["organic_results"])
-        else: 
+        else:
             break
     citing_pub_id_string = ";".join(result_id_list)
     return node_data, citing_pub_id_string
+
+
+def extract_year(string):
+    match = re.search(r'\b(19|20)\d{2}(?=[ ])(?![^ ])\b', string)
+    if match:
+        return int(match.group())
+    else:
+        return 0
+
+
+def add_to_df(df, pub_list):
+    for pub in pub_list:
+        if (df.loc[(df['Result_id'] == pub.result_id)].empty):  # avoiding duplicates
+            df_entry = [pub.title,
+                        pub.year,
+                        pub.abstract,
+                        pub.cite_id,
+                        pub.cite_count,
+                        pub.result_id]
+            df.loc[len(df.index)] = df_entry
+    return df
 
 
 def getKey():
@@ -153,10 +154,6 @@ def main():
     limit = int(input("Please indicate the number of root documents eg. 20: "))
     citation_limit = int(input(
         "Please indicate the number of citing documents per root document eg. 20: "))
-    # topic = TOPIC
-    # min_year = MIN_YEAR
-    # max_year = MAX_YEAR
-    # limit = LIMIT
     api_key = getKey()
     global SAVE_PATH  # Change global constant
     SAVE_PATH = "./data/" + CURRENT_TIME_STRING + "_" + topic + "/"
@@ -164,10 +161,20 @@ def main():
         os.makedirs(SAVE_PATH)
     alldata_df, main_pubs_df = retrieve_docs(
         topic, min_year, max_year, limit, citation_limit, api_key)
-    # cited_node_dict, data_df, path_to_cited_doc = prepare_citedby_node(main_doc_list, MIN_YEAR, MAX_YEAR, CITATION_LIMIT, api_key)
-    # save_all_nodes(cited_node_dict)
-    # create_network_excel(cited_node_dict, data_df)
     return None
+
+
+def get_google_data(save_folder, topic, min_year, max_year, root_doc, cite_doc):
+    api_key = getKey()
+    global SAVE_PATH
+    SAVE_PATH = save_folder
+    min_year = int(min_year)
+    max_year = int(max_year)
+    root_doc = int(root_doc)
+    cite_doc = int(cite_doc)
+    alldata_df, main_pubs_df = retrieve_docs(
+        topic, min_year, max_year, root_doc, cite_doc, api_key)
+    return 0
 
 
 if __name__ == "__main__":

@@ -7,26 +7,6 @@ import numpy as np
 
 TOKENIZER = RegexpTokenizer(r"\w+")
 
-
-def mine_paper_info(cluster, *args):
-    combined_words = []
-    filtered_words = []
-    cluster["Abstract"] = cluster["Abstract"].fillna("")
-    for index, row in cluster.iterrows():
-        title_words = TOKENIZER.tokenize(row["Title"].lower())
-        abstract_words = TOKENIZER.tokenize(row["Abstract"].lower())
-        combined_words = combined_words + title_words + abstract_words
-
-    stop_words = set(stopwords.words("english"))
-    for word in combined_words:
-        if word not in stop_words and len(word) > 0:
-            filtered_words.append(word)
-
-    fdist = FreqDist(filtered_words)
-    no_of_words = len(fdist)
-    return no_of_words, fdist.most_common(no_of_words), fdist
-
-
 # def mine_cluster(df, word_bank, no_of_doc):
 #     doc_word_count, cluster_fdist, cluster_word_list = mine_paper_info(df)
 #     list_of_word_tuples = []
@@ -39,7 +19,6 @@ def mine_paper_info(cluster, *args):
 #     list_of_word_tuples.sort(key=lambda x: x[1])
 #     cluster_name = " ".join([x[0] for x in cluster_word_list.most_common(2)])
 #     return cluster_word_list, cluster_name
-
 
 def filter_stopwords(words):
     word_dict = {}
