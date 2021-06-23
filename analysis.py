@@ -12,6 +12,7 @@ import lib.graphcreator as graphcreator
 import lib.metrics as metrics
 import lib.textminer as textminer
 import lib.textminer_nlp as textminer_nlp
+import lib.topic_model as topic_model
 
 ALLDATA_FILE = "./data/16-06-2021_1444_Natural Language Processing/alldata.xlsx"
 MAINPUBS_FILE = "./data/16-06-2021_1444_Natural Language Processing/main_pubs.xlsx"
@@ -29,7 +30,8 @@ def create_nodes(alldata_df, mainpubs_df):
                 entry = alldata_df.loc[alldata_df['Result_id'] == result_id]
                 entry = entry.iloc[0]
                 node = Node(entry["Title"], entry["Year"], entry["Abstract"], entry['Citedby_id'],
-                            entry["No_of_citations"], entry["Result_id"])
+                            entry["No_of_citations"], entry["Result_id"], entry['Topic Number'], 
+                            entry['Topic'], entry['Topic Probability'])
                 full_node_dict[node.result_id] = node
             else:
                 node = full_node_dict[result_id]
@@ -45,6 +47,8 @@ def create_network_file(node_dict, alldata_df):
     for node in node_dict.values():
         bib_couple_dict = node.edge_dict
         pub_title = node.title
+        pub_topic_no = node.topic_no
+        pub_topic = node.topic
         node_in_network.add(pub_title)
         for couple in bib_couple_dict.items():
             couple_id = couple[0]
@@ -54,8 +58,8 @@ def create_network_file(node_dict, alldata_df):
                 continue
             else:
                 edge_weight = couple[1]
-                connected_nodes.append([pub_title, couple_pub_title, edge_weight])
-    col = ['Publication_1', 'Publication_2', 'Weight']
+                connected_nodes.append([pub_title, couple_pub_title, edge_weight, pub_topic_no, pub_topic])
+    col = ['Publication_1', 'Publication_2', 'Weight', 'Topic Number', 'Topic']
     network_df = pd.DataFrame(data=connected_nodes, columns=col)
     network_graph = _create_graph(connected_nodes)
     components = _create_clusters(network_graph)
@@ -72,7 +76,7 @@ def create_network_file(node_dict, alldata_df):
     return connected_nodes, components
 
 
-def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year):
+def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, lda_model, dictionary):
     clusters = {}
     linegraph_data_dict = {}
     no_of_doc = len(alldata_df.index)
@@ -83,9 +87,9 @@ def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year):
         cluster_df = alldata_df[alldata_df["Title"].isin(cluster)]
         cluster_df.insert(len(cluster_df.columns), "Cluster", cluster_no)
         cluster_word_dict, cluster_name, raw_word_list = textminer.mine_cluster(cluster_df, word_bank, no_of_doc, "Title", "Abstract")
-        cluster_summary = textminer_nlp.create_extractive_summary(cluster_df, 2)
-        print(cluster_name)
-        print(cluster_summary)
+        # cluster_summary = textminer_nlp.create_extractive_summary(cluster_df, 2)
+        # print(cluster_name)
+        # print(cluster_summary)
         if not os.path.exists(SAVEPATH + "/{}".format(cluster_name)):
             os.makedirs(SAVEPATH + "/{}".format(cluster_name))
         data_path = SAVEPATH + "/{}/{}.xlsx".format(cluster_name, cluster_name)
@@ -115,7 +119,7 @@ def create_cluster_sum(clusters_dict, linegraph_data, min_year, max_year):
         growth = metrics.growth_index(cluster_df, total_doc, max_year, min_year)
         impact = metrics.impact_index(cluster_df)
         cluster_type = metrics.get_cluster_type(cluster_df, year_range)
-        current_cluster = [cluster_name, cluster_type, size, growth, impact]   #TBH change to cluster type once year is solved
+        current_cluster = [cluster_name, cluster_type, size, growth, impact]
         cluster_summary.append(current_cluster)
 
     col=['Name', 'Type', 'Size', 'Growth Index', 'Impact Index']
@@ -125,6 +129,22 @@ def create_cluster_sum(clusters_dict, linegraph_data, min_year, max_year):
     cluster_sum_df.to_excel(data_path, index=False)
     graphcreator.generate_summary_linegraph(linegraph_data, linegraph_path)
     return cluster_sum_df
+
+def tag_pubs_to_topics(cluster_df, lda_model, dictionary):
+    topics = lda_model.print_topics(num_topics=-1, num_words=4)
+    topics.sort(key=lambda x:x[0])
+    for index, row in cluster_df.iterrows():
+        title = row["Title"]
+        title = topic_model.prepare_text_for_lda(title)
+        title_bow = dictionary.doc2bow(title)
+        topic = lda_model.get_document_topics(title_bow)
+        topic.sort(key=lambda x:x[1], reverse=True)
+        top_topic = topics[topic[0][0]]    #0th index of First Tuple in list [(3, 0.523), ...]
+        cluster_df.loc[index, 'Topic Number'] = top_topic[0]
+        cluster_df.loc[index, 'Topic'] = top_topic[1]
+        cluster_df.loc[index, 'Topic Probability'] = topic[0][1]
+    
+    return cluster_df
 
 def _create_graph(node_list):
     graph = nx.Graph()
@@ -152,11 +172,14 @@ def main():
     alldata_df = pd.read_excel(alldata_file)
     mainpubs_df = pd.read_excel(mainpubs_file)
 
+    no_of_topics = int(len(alldata_df.index) * 0.05)   # 5% of all publications in the topic
+    topics, lda_model, dictionary = topic_model.prepare_topics(alldata_df, no_of_topics)
+    alldata_df = tag_pubs_to_topics(alldata_df, lda_model, dictionary)
     node_dict = create_nodes(alldata_df, mainpubs_df)
     connected_nodes_list, components = create_network_file(node_dict, alldata_df)
 
     word_bank = textminer.mine_word_bank(alldata_df, "Title", "Abstract")
-    list_of_cluster_df, linegraph_data = create_cluster_indi(components, alldata_df, word_bank, min_year, max_year)
+    list_of_cluster_df, linegraph_data = create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, lda_model, dictionary)
     create_cluster_sum(list_of_cluster_df, linegraph_data, min_year, max_year)
     return None
 
@@ -165,13 +188,21 @@ def start_analysis(alldata_file, mainpubs_file, savepath, min_year, max_year):
     max_year = int(max_year)
     alldata_df = pd.read_excel(alldata_file)
     mainpubs_df = pd.read_excel(mainpubs_file)
+    global SAVEPATH
+    SAVEPATH = savepath
 
+    no_of_topics = int(len(alldata_df.index) * 0.05)   # 5% of all publications in the topic
+    print("Number of topics: " + str(no_of_topics))
+    topics, lda_model, dictionary = topic_model.prepare_topics(alldata_df, no_of_topics)
+    alldata_df = tag_pubs_to_topics(alldata_df, lda_model, dictionary)
+    print("Creating Network File now")
     node_dict = create_nodes(alldata_df, mainpubs_df)
     connected_nodes_list, components = create_network_file(node_dict, alldata_df)
-
+    print("Looking into Clusters now")
     word_bank = textminer.mine_word_bank(alldata_df, "Title", "Abstract")
-    list_of_cluster_df, linegraph_data = create_cluster_indi(components, alldata_df, word_bank, min_year, max_year)
+    list_of_cluster_df, linegraph_data = create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, lda_model, dictionary)
     create_cluster_sum(list_of_cluster_df, linegraph_data, min_year, max_year)
+    print("Analysis Completed")
     return 0
 
 

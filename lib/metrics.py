@@ -18,8 +18,8 @@ def growth_index(cluster, total_doc, max_year, min_year):
             break
 
     growth_index = cluster_percentage * (sum_of_growth / ((data_collection_period - 1) * 100))
-    print(cluster_percentage)
-    print(sum_of_growth)
+    # print(cluster_percentage)
+    # print(sum_of_growth)
     return growth_index
 
 def impact_index(cluster):

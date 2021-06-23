@@ -1,11 +1,14 @@
 class Node:
-    def __init__(self, title, year, abstract, cite_id, cite_count, result_id):
+    def __init__(self, title, year, abstract, cite_id, cite_count, result_id, topic_no, topic, topic_prob):
         self.title = title
         self.year = year
         self.abstract = abstract
         self.cite_id = cite_id
         self.cite_count = cite_count
         self.result_id = result_id
+        self.topic_no = topic_no
+        self.topic = topic
+        self.topic_prob = topic_prob
         self.edge_dict = {}
 
     def add_edge(self, result_id):

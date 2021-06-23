@@ -5,6 +5,8 @@ from nltk import RegexpTokenizer
 import pandas as pd
 import numpy as np
 
+import lib.topic_model as topic_model
+
 TOKENIZER = RegexpTokenizer(r"\w+")
 
 # def mine_cluster(df, word_bank, no_of_doc):

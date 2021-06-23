@@ -54,6 +54,27 @@ def prepare_bow_dictionary(text_list):
     corpus = [dictionary.doc2bow(text) for text in text_list]
     return dictionary, corpus
 
+def prepare_topics(dataframe, no_topics):
+    text_list = []
+    for index, row in dataframe.iterrows():
+        tokens = prepare_text_for_lda(row["Title"])
+        text_list.append(tokens)
+
+    dictionary, corpus = prepare_bow_dictionary(text_list)
+
+    ldamodel = gensim.models.ldamodel.LdaModel(corpus, num_topics=no_topics, 
+                                                id2word=dictionary, passes=15, 
+                                                random_state=0)
+
+    topics = ldamodel.print_topics(num_words=4)
+    return topics, ldamodel, dictionary
+
+def retrieve_topic_for_doc(doc, ldamodel, dictionary):
+    content = prepare_text_for_lda(doc)
+    content_bow = dictionary.doc2bow(new_doc)
+    topic = ldamodel.get_document_topics(content_bow)
+
+    return topic
 
 if __name__ == "__main__":
     FILEPATH = "C:/Users/luciu/Desktop/NUS Lecture Notes/Y2S2/Summer Internship/bibicite/gscholar/data/16-06-2021_1444_Natural Language Processing/networks neural/networks neural.xlsx"
