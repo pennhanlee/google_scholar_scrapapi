@@ -45,7 +45,7 @@ def retrieve_docs(topic, min_year, max_year, limit, citation_limit, key):
             for entry in result_list:
                 title = entry["title"]
                 year = extract_year(entry["publication_info"]["summary"])
-                snippet = entry["snippet"]
+                snippet = entry["snippet"] if "snippet" in entry else "Empty"
                 cites_id = entry["inline_links"]["cited_by"]["cites_id"]
                 total_cites = entry["inline_links"]["cited_by"]["total"]
                 result_id = entry["result_id"]
