@@ -107,6 +107,23 @@ def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, l
     
     return clusters, linegraph_data_dict
 
+def create_cluster_indi_2(cluster, cluster_no, alldata_df, word_bank, no_of_doc, min_year, max_year, lda_model, dictionary):
+    cluster_df = alldata_df[alldata_df["Title"].isin(cluster)]
+    cluster_df.insert(len(cluster_df.columns), "Cluster", cluster_no)
+    cluster_word_dict, cluster_name, raw_word_list = textminer.mine_cluster(cluster_df, word_bank, no_of_doc, "Title", "Abstract")
+    # cluster_summary = textminer_nlp.create_extractive_summary(cluster_df, 2)
+    # print(cluster_name)
+    # print(cluster_summary)
+    if not os.path.exists(SAVEPATH + "/{}".format(cluster_name)):
+        os.makedirs(SAVEPATH + "/{}".format(cluster_name))
+    data_path = SAVEPATH + "/{}/{}.xlsx".format(cluster_name, cluster_name)
+    linegraph_path = SAVEPATH + "/{}/linegraph.png".format(cluster_name)
+    wordcloud_path = SAVEPATH + "/{}/wordcloud.png".format(cluster_name)
+    cluster_df.to_excel(data_path, index=False)
+    # graphcreator.generate_word_cloud(raw_word_list, wordcloud_path)
+    linegraph_data = graphcreator.generate_year_linegraph(cluster_df, linegraph_path, min_year, max_year)
+
+    return cluster_name, cluster_df, linegraph_data
 
 def create_cluster_sum(clusters_dict, linegraph_data, min_year, max_year):
     cluster_summary = []
@@ -195,14 +212,17 @@ def start_analysis(alldata_file, mainpubs_file, savepath, min_year, max_year):
     print("Number of topics: " + str(no_of_topics))
     topics, lda_model, dictionary = topic_model.prepare_topics(alldata_df, no_of_topics)
     alldata_df = tag_pubs_to_topics(alldata_df, lda_model, dictionary)
+
     print("Creating Network File now")
     node_dict = create_nodes(alldata_df, mainpubs_df)
     connected_nodes_list, components = create_network_file(node_dict, alldata_df)
     print("Looking into Clusters now")
+
     word_bank = textminer.mine_word_bank(alldata_df, "Title", "Abstract")
     list_of_cluster_df, linegraph_data = create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, lda_model, dictionary)
     create_cluster_sum(list_of_cluster_df, linegraph_data, min_year, max_year)
     print("Analysis Completed")
+
     return 0
 
 
