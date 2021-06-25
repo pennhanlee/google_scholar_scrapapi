@@ -146,47 +146,49 @@ class Application(tk.Frame):
         topic = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
         topic.place(relx=0.1, rely=0.1, relwidth=0.6, relheight=0.05)
 
+        key_label = tk.Label(frame, text="Please provide the API key for SERP API", bg=MAINWINDOW_WHITE)
+        key_label.place(relx=0.1, rely=0.15, relwidth=0.6, relheight=0.05)
+        key = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
+        key.place(relx=0.1, rely=0.20, relwidth=0.6, relheight=0.05)
+
         min_year_label = tk.Label(
             frame, text="Please indicate \nearliest year eg. 2010", bg=MAINWINDOW_WHITE)
-        min_year_label.place(relx=0.1, rely=0.20, relwidth=0.2, relheight=0.1)
+        min_year_label.place(relx=0.1, rely=0.30, relwidth=0.2, relheight=0.1)
         min_year = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
         min_year.config(validate="key", validatecommand=(reg_valid_number, '%P'))
-        min_year.place(relx=0.1, rely=0.30, relwidth=0.2, relheight=0.05)
+        min_year.place(relx=0.1, rely=0.40, relwidth=0.2, relheight=0.05)
 
         max_year_label = tk.Label(
             frame, text="Please indicate \nlatest year eg. 2020", bg=MAINWINDOW_WHITE)
-        max_year_label.place(relx=0.5, rely=0.20, relwidth=0.2, relheight=0.1)
+        max_year_label.place(relx=0.5, rely=0.30, relwidth=0.2, relheight=0.1)
         max_year = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
         max_year.config(validate="key", validatecommand=(reg_valid_number, "%P"))
-        max_year.place(relx=0.5, rely=0.30, relwidth=0.2, relheight=0.05)
+        max_year.place(relx=0.5, rely=0.40, relwidth=0.2, relheight=0.05)
 
         root_doc_label = tk.Label(
             frame, text="Please indicate the number \nof root documents eg. 20", bg=MAINWINDOW_WHITE)
-        root_doc_label.place(relx=0.0, rely=0.40, relwidth=0.4, relheight=0.1)
+        root_doc_label.place(relx=0.0, rely=0.45, relwidth=0.4, relheight=0.1)
         root_doc = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
         root_doc.config(validate="key", validatecommand=(reg_valid_number, '%P'))
-        root_doc.place(relx=0.1, rely=0.50, relwidth=0.2, relheight=0.05)
+        root_doc.place(relx=0.1, rely=0.55, relwidth=0.2, relheight=0.05)
 
         cite_doc_label = tk.Label(
             frame, text="Please indicate the number of citing \ndocuments per root document eg. 20", bg=MAINWINDOW_WHITE)
-        cite_doc_label.place(relx=0.4, rely=0.40, relwidth=0.4, relheight=0.1)
+        cite_doc_label.place(relx=0.4, rely=0.45, relwidth=0.4, relheight=0.1)
         cite_doc = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
         cite_doc.config(validate="key", validatecommand=(reg_valid_number, '%P'))
-        cite_doc.place(relx=0.5, rely=0.50, relwidth=0.2, relheight=0.05)
+        cite_doc.place(relx=0.5, rely=0.55, relwidth=0.2, relheight=0.05)
 
         save_folder_label = tk.Label(
             frame, text="Please provide path to folder to save the documents", bg=MAINWINDOW_WHITE)
-        save_folder_label.place(
-            relx=0.1, rely=0.6, relwidth=0.6, relheight=0.05)
+        save_folder_label.place(relx=0.1, rely=0.65, relwidth=0.65, relheight=0.05)
         save_folder = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
-        save_folder.place(relx=0.1, rely=0.65, relwidth=0.6, relheight=0.05)
+        save_folder.place(relx=0.1, rely=0.70, relwidth=0.6, relheight=0.05)
         save_folder_btn = self.get_folder_button(frame, save_folder)
-        save_folder_btn.place(relx=0.75, rely=0.65,
-                              relwidth=0.1, relheight=0.05)
+        save_folder_btn.place(relx=0.75, rely=0.70,relwidth=0.1, relheight=0.05)
 
-        retrieve_info = self.retrieve_info_button(frame, save_folder, topic, min_year, 
-                                                    max_year, root_doc, cite_doc)
-        retrieve_info.place(relx=0.1, rely=0.75, relwidth=0.6, relheight=0.1)
+        retrieve_info = self.retrieve_info_button(frame, save_folder, topic, key, min_year, max_year, root_doc, cite_doc)
+        retrieve_info.place(relx=0.1, rely=0.85, relwidth=0.6, relheight=0.1)
 
         return 0
 
@@ -266,17 +268,17 @@ class Application(tk.Frame):
             for entry in all_entry:
                 entry.config({'background': SIDEBAR_LIGHTGREY})
             print("EXECUTING")
-            analysis_of_data(
-                alldata_file, mainpubs_file, folder_path, minimum_year, maximum_year)
+            analysis_of_data(alldata_file, mainpubs_file, folder_path, minimum_year, maximum_year)
             return "COMPLETED"
         else:
             self.update_output_message(error_message)
             return "ERROR IN INPUTS"
 
-    def get_google_data(self, save_folder, topic, min_year, max_year, root_doc, cite_doc):
+    def get_google_data(self, save_folder, topic, key, min_year, max_year, root_doc, cite_doc):
         all_valid = True
         folder_path = save_folder.get()
         query_topic = topic.get()
+        api_key = key.get()
         minimum_year = min_year.get()
         maximum_year = max_year.get()
         no_of_root_doc = root_doc.get()
@@ -290,6 +292,11 @@ class Application(tk.Frame):
         if (len(query_topic) == 0):
             topic.config({'background': ERROR_COLOUR})
             error_message += "Query Topic cannot be empty. \n"
+            all_valid = False
+
+        if (len(api_key) == 0):
+            topic.config({'background': ERROR_COLOUR})
+            error_message += "API Key cannot be empty. \n"
             all_valid = False
 
         if (len(minimum_year) == 0):
@@ -316,16 +323,8 @@ class Application(tk.Frame):
             all_entry = [save_folder, topic, min_year, max_year, root_doc, cite_doc]
             for entry in all_entry:
                 entry.config({'background': SIDEBAR_LIGHTGREY})
-            self.update_output_message("Data Collection started")
-            self.progress_bar['value'] = 0
-            for x in range(0, 100):
-                self.progress_bar["value"] = x
-                root.update()
-                time.sleep(0.5)
-            
-            # serpg.get_google_data(folder_path, query_topic, minimum_year,
-            #                       maximum_year, no_of_root_doc, no_of_cite_doc)
-            self.update_output_message("Data Collection completed")
+
+            retrieval_of_data(folder_path, query_topic, api_key, minimum_year, maximum_year, no_of_root_doc, no_of_cite_doc)
             return "COMPLETED"
         else:
             self.update_output_message(error_message)
@@ -340,6 +339,40 @@ def is_valid_number(input):
     else:
         return False
 
+def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_limit):
+    total_retrieved = 0
+    alldata_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id']
+    alldata_df = pd.DataFrame(columns=alldata_col)
+    main_data_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id', 'Type_of_Pub', 'Citing_pubs_id']
+    main_data_df = pd.DataFrame(columns=main_data_col)
+    
+    app.update_output_message("Starting retrieval of data")
+    app.progress_bar["value"] = 10
+    app.master.update()
+
+    while (total_retrieved < limit):
+        remainder = limit - total_retrieved
+        num_to_retrieve = 20 if remainder >= 20 else remainder
+        alldata, mainpubs = serpg.retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_limit, total_retrieved)
+        total_retrieved += len(mainpubs.keys())
+        alldata_df = serpg.add_to_df(alldata_df, alldata)
+        main_data_df = serpg.add_to_df(main_data_df, mainpubs)
+
+        app.update_output_message("Retrieved " + str(total_retrieved) + " number of documents")
+        app.progress_bar["value"] += (80/limit)
+        app.master.update()
+
+    alldata_path = savepath + "/alldata.xlsx"
+    alldata_df.to_excel(alldata_path, index=False)
+    mainpub_path = savepath + "/main_pubs.xlsx"
+    main_data_df.to_excel(mainpub_path, index=False)
+
+    app.update_output_message("Retrieval of data Complete")
+    app.progress_bar["value"] = 100
+    app.master.update()
+
+    return 0
+
 def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
     min_year = int(min_year)
     max_year = int(max_year)
@@ -347,10 +380,6 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
     mainpubs_df = pd.read_excel(mainpubs_file)
 
     no_of_topics = int(len(alldata_df.index) * 0.05)   # 5% of all publications in the topic
-    app.update_output_message("Number of topics: " + str(no_of_topics))
-    app.progress_bar["value"] = 10
-    app.master.update()
-
     topics, lda_model, dictionary = topic_model.prepare_topics(alldata_df, no_of_topics)
     alldata_df = analysis.tag_pubs_to_topics(alldata_df, lda_model, dictionary)
 
@@ -361,15 +390,13 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
     node_dict = analysis.create_nodes(alldata_df, mainpubs_df)
     connected_nodes_list, components = analysis.create_network_file(node_dict, alldata_df)
 
-    app.update_output_message("Looking into Clusters now")
-
     word_bank = textminer.mine_word_bank(alldata_df, "Title", "Abstract")
-    
     clusters = {}
     linegraph_data_dict = {}
     no_of_doc = len(alldata_df.index)
     for x in range(0, len(components)):
-        app.progress_bar["value"] = 20 + x
+        app.update_output_message("Analysing Component " + str(x))
+        app.progress_bar["value"] += (70/len(components))
         app.master.update()
 
         cluster = components[x]
@@ -383,8 +410,6 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
     combined_df = pd.concat(clusters)
     combineddata_path = savepath + "/combined_data.xlsx"
     combined_df.to_excel(combineddata_path, index=False)
-
-    app.update_output_message("Creating Summary files now")
     analysis.create_cluster_sum(clusters, linegraph_data_dict, min_year, max_year)
 
     app.update_output_message("Analysis Completed")

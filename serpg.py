@@ -17,13 +17,48 @@ SAVE_PATH = "./data/"
 CURRENT_TIME_STRING = datetime.now().strftime("%d-%m-%Y_%H%M")
 
 
+def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_limit, offset):
+    params = {
+        "api_key": key,
+        "engine": "google_scholar",
+        "q": topic,
+        "hl": "en",
+        "as_ylo": min_year,
+        "as_yhi": max_year,
+        "start": offset,
+        "num": num_to_retrieve,
+    }
+    search = GoogleSearch(params)
+    results = search.get_dict()
+    alldata_dict = {}
+    maindata_dict = {}
+    if ("organic_results" in results):
+        result_list = results["organic_results"]
+        for entry in result_list:
+            title = entry["title"]
+            year = extract_year(entry["publication_info"]["summary"])
+            snippet = entry["snippet"] if "snippet" in entry else "Empty"
+            cites_id = entry["inline_links"].get("cited_by").get("cites_id") if "cited_by" in entry["inline_links"] else "Empty"
+            total_cites = entry["inline_links"].get("cited_by").get("total") if "cited_by" in entry["inline_links"] else 0
+            result_id = entry["result_id"]
+
+            node_data, citing_result_id = retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key)
+
+            alldata_df_entry = [title, year, snippet, cites_id, total_cites, result_id]
+            main_df_entry = [title, year, snippet, cites_id, total_cites, result_id, "Main_Pub", citing_result_id]
+
+            alldata_dict[result_id] = alldata_df_entry
+            alldata_dict.update(node_data)
+            maindata_dict[result_id] = main_df_entry
+
+    return alldata_dict, maindata_dict
+
+
 def retrieve_docs(topic, min_year, max_year, limit, citation_limit, key):
     total_retrieved = 0
-    alldata_col = ['Title', 'Year', 'Abstract',
-                   'Citedby_id', 'No_of_citations', 'Result_id']
+    alldata_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id']
     alldata_df = pd.DataFrame(columns=alldata_col)
-    main_data_col = ['Title', 'Year', 'Abstract', 'Citedby_id',
-                     'No_of_citations', 'Result_id', 'Type_of_Pub', 'Citing_pubs_id']
+    main_data_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id', 'Type_of_Pub', 'Citing_pubs_id']
     main_data_df = pd.DataFrame(columns=main_data_col)
     while (total_retrieved < limit):
         remainder = limit - total_retrieved
@@ -46,8 +81,8 @@ def retrieve_docs(topic, min_year, max_year, limit, citation_limit, key):
                 title = entry["title"]
                 year = extract_year(entry["publication_info"]["summary"])
                 snippet = entry["snippet"] if "snippet" in entry else "Empty"
-                cites_id = entry["inline_links"]["cited_by"]["cites_id"]
-                total_cites = entry["inline_links"]["cited_by"]["total"]
+                cites_id = entry["inline_links"].get("cited_by").get("cites_id") if "cited_by" in entry["inline_links"] else "Empty"
+                total_cites = entry["inline_links"].get("cited_by").get("total") if "cited_by" in entry["inline_links"] else 0
                 result_id = entry["result_id"]
 
                 node_data, citing_result_id = retrieve_citing_pub(cites_id,
@@ -76,11 +111,13 @@ def retrieve_docs(topic, min_year, max_year, limit, citation_limit, key):
 
 
 def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
-    node_data = []
+    node_data = {}
     result_id_list = []
-    result_list = []
+    # result_list = []
     total_retrieved = 0
     while (total_retrieved < citation_limit):
+        if cites_id == "Empty":
+            break
         remainder = citation_limit - total_retrieved
         num_to_retrieve = remainder if remainder < 20 else 20
         params = {
@@ -96,19 +133,18 @@ def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
         search = GoogleSearch(params)
         results = search.get_dict()
         if ("organic_results" in results):
-            result_list += results["organic_results"]
-            for doc in result_list:
+            # result_list += results["organic_results"]
+            for doc in results['organic_results']:
                 title = doc["title"]
                 year = extract_year(doc["publication_info"]["summary"])
                 snippet = doc["snippet"] if "snippet" in doc else "Empty"
-                cite_id = doc["inline_links"].get("cited_by").get(
-                    "cites_id") if "cited_by" in doc["inline_links"] else "Empty"
-                total_cited = doc["inline_links"].get("cited_by").get(
-                    "total") if "cited_by" in doc["inline_links"] else 0
+                cite_id = doc["inline_links"].get("cited_by").get("cites_id") if "cited_by" in doc["inline_links"] else "Empty"
+                total_cited = doc["inline_links"].get("cited_by").get("total") if "cited_by" in doc["inline_links"] else 0
                 result_id = doc["result_id"]
-                node = Node(title, year, snippet, cite_id,
-                            total_cited, result_id)
-                node_data.append(node)
+
+                node = Node(title, year, snippet, cite_id, total_cited, result_id)    #Still thinking what the node class is for
+                node_in_list_form = [title, year, snippet, cite_id, total_cited, result_id]  #Easier to just use the list
+                node_data[result_id] = node_in_list_form
                 result_id_list.append(result_id)
             total_retrieved += len(results["organic_results"])
         else:
@@ -125,15 +161,21 @@ def extract_year(string):
         return 0
 
 
-def add_to_df(df, pub_list):
-    for pub in pub_list:
-        if (df.loc[(df['Result_id'] == pub.result_id)].empty):  # avoiding duplicates
-            df_entry = [pub.title,
-                        pub.year,
-                        pub.abstract,
-                        pub.cite_id,
-                        pub.cite_count,
-                        pub.result_id]
+def add_to_df(df, pub_dict):
+    '''
+    Params
+    df = pandas Dataframe
+    pub_dict = publication dictionary. Key = Result_id, Value = [Publication Info] 
+    
+    Return
+    Updated dataframe
+
+    Add a dictionary of publications into the dataframe. 
+    This function will check if an entry already exist by checking for the unique Result_id of the document.
+    '''
+    for pub_id in pub_dict.keys():
+        if (df.loc[(df['Result_id'] == pub_id)].empty):  # avoiding duplicates
+            df_entry = pub_dict[pub_id]
             df.loc[len(df.index)] = df_entry
     return df
 

@@ -1,5 +1,5 @@
 class Node:
-    def __init__(self, title, year, abstract, cite_id, cite_count, result_id, topic_no = None, topic = None, topic_prob = None):
+    def __init__(self, title, year, abstract, cite_id, cite_count, result_id, topic_no=None, topic=None, topic_prob=None):
         self.title = title
         self.year = year
         self.abstract = abstract
