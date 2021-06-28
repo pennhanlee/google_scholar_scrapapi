@@ -18,6 +18,49 @@ CURRENT_TIME_STRING = datetime.now().strftime("%d-%m-%Y_%H%M")
 
 
 def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_limit, offset):
+    ''' Retrieves publications of a topic in Google Scholar through the SERPAPI
+    as well as the publications that cite this publication for 1 iteration.
+    To be used together with GUI for GUI to track each iteration for UX feature 
+
+    Parameters
+    ----------------
+    topic : str
+                the topic of interest
+
+    key : str
+                the api key to connect SERPAPI successfully
+
+    min_year : int
+                the earliest year to limit the period of publication retrieval
+
+    max_year : int
+                the latest year to limit the period of publication retrieval
+
+    num_to_retrieve : int
+                the number of publications wanted
+
+    citation_limit : int
+                the number of citing publications wanted
+
+    offset : int
+                the offset to be provided to SERPAPI to retrieve new publications.
+    
+    Returns
+    ---------------
+    alldata_dict : dict
+                a dictionary containing all publications extracted
+
+                key, value = Result_id, List of Publication info
+                Publication info = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id']
+
+    mainpubs_dict : dict
+                a dictionary containing root publications extracted. Does
+                not contain publications extracted by retrieve_citing_pub(...)
+
+                key, value = Result_id, List of Publication info
+                Publication info = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id', 'Type_of_Pub', 'Citing_pubs_id']
+    '''
+
     params = {
         "api_key": key,
         "engine": "google_scholar",
@@ -55,6 +98,45 @@ def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_li
 
 
 def retrieve_docs(topic, min_year, max_year, limit, citation_limit, key):
+    ''' Retrieves publications of a topic in Google Scholar through the SERPAPI
+    as well as the publications that cite this publication iteratively until the 
+    provided limit is reached. 
+
+    Parameters
+    ----------------
+    topic : str
+                the topic of interest
+
+    min_year : int
+                the earliest year to limit the period of publication retrieval
+
+    max_year : int
+                the latest year to limit the period of publication retrieval
+
+    limit : int
+                the number of publications wanted
+
+    citation_limit : int
+                the number of citing publications wanted
+
+    key : str
+                the api key to connect SERPAPI successfully
+
+    Returns
+    ---------------
+    alldata_df : pandas DataFrame
+                a DataFrame containing all publications extracted
+
+                columns : ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id']
+
+    mainpubs_df : pandas DataFrame
+                a DataFrame containing root publications extracted. Does
+                not contain publications extracted by retrieve_citing_pub(...)
+
+                columns : ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id', 'Type_of_Pub', 'Citing_pubs_id']
+
+    '''
+
     total_retrieved = 0
     alldata_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id']
     alldata_df = pd.DataFrame(columns=alldata_col)
@@ -111,6 +193,35 @@ def retrieve_docs(topic, min_year, max_year, limit, citation_limit, key):
 
 
 def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
+    ''' Retrieves the citing publications of a specific publication in Google Scholar through the SERPAPI
+
+    Parameters
+    ----------------
+    cites_id : str
+                the cites_id of a publication that is provided by Google Scholar
+
+    min_year : int
+                the earliest year to limit the period of publication retrieval
+
+    max_year : int
+                the latest year to limit the period of publication retrieval
+
+    citation_limit : int
+                the number of citing publications wanted
+
+    key : str
+                the api key to connect SERPAPI successfully
+
+    Returns
+    ---------------
+    node_data : dict
+                a dictionary of publications that cite the main publication identified by cites_id.
+                key, value = Result_id, Publication
+
+    citing_pub_id_string : str
+                a string of Result_id of the retrieved publication, separated by ;
+    '''
+
     node_data = {}
     result_id_list = []
     # result_list = []
@@ -154,6 +265,17 @@ def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
 
 
 def extract_year(string):
+    ''' extracts the year, limited to 1900 - 2099, from a given string
+
+    Paramenters
+    ---------------
+    string : str, provided string of characters
+
+    Returns
+    --------------
+    int : int type of the year contained in the string or 0 if no match is found
+    '''
+
     match = re.search(r'\b(19|20)\d{2}(?=[ ])(?![^ ])\b', string)
     if match:
         return int(match.group())
@@ -162,17 +284,21 @@ def extract_year(string):
 
 
 def add_to_df(df, pub_dict):
-    '''
-    Params
-    df = pandas Dataframe
-    pub_dict = publication dictionary. Key = Result_id, Value = [Publication Info] 
-    
-    Return
-    Updated dataframe
+    ''' Adds a dictionary of publication into the dataframe. This function
+    will check if an entry already exists by checking for the unique Result_id of the publication
+    which should be the key of the dictionary. 
 
-    Add a dictionary of publications into the dataframe. 
-    This function will check if an entry already exist by checking for the unique Result_id of the document.
+    Parameters
+    ----------------
+    df : pandas Dataframe
+    
+    pub_dict : publication dictionary (key,value = Result_id, Publication)
+    
+    Returns
+    ---------------
+    pandas Dataframe : Updated pandas Dataframe containing the dictonary
     '''
+
     for pub_id in pub_dict.keys():
         if (df.loc[(df['Result_id'] == pub_id)].empty):  # avoiding duplicates
             df_entry = pub_dict[pub_id]
@@ -181,6 +307,13 @@ def add_to_df(df, pub_dict):
 
 
 def getKey():
+    ''' Retrieves the key from key.json file
+
+    Returns
+    --------------
+    str : specific key located in the key.json file
+
+    '''
     key = ''
     with open('key.json') as json_file:
         data = json.load(json_file)

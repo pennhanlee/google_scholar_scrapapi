@@ -1,4 +1,27 @@
 class Node:
+    ''' A node object is used to keep track of the publication information. It also has a dictionary to  maintain a record
+        of the bibliographic couples and its weight of connection
+
+        Attributes
+        ------------
+        title : str
+        year : int
+        abstract : str
+        cite_id : str
+        cite_count : int
+        cite_count : int
+        result_id : str
+        topic_no : str, optional
+        topic : str, optional
+        topic_prob: str, optional
+
+        Methods
+        ----------
+        add_edge(result_id)
+
+        to_string()
+    '''
+
     def __init__(self, title, year, abstract, cite_id, cite_count, result_id, topic_no=None, topic=None, topic_prob=None):
         self.title = title
         self.year = year
@@ -12,6 +35,18 @@ class Node:
         self.edge_dict = {}
 
     def add_edge(self, result_id):
+        ''' Adds a record to the edge dictionary of this node
+
+            Parameters
+            -----------
+            result_id: str
+                    result_id as a unique key for the dictionary
+
+            Returns
+            ----------
+            None
+        '''
+        
         if result_id in self.edge_dict:
             self.edge_dict[result_id] += 1
         else:
@@ -19,6 +54,18 @@ class Node:
         return None
 
     def to_string(self):
+        ''' Prints a string statement of the Node with some of its attributes
+
+            Parameters
+            -----------
+            None
+
+            Returns
+            ----------
+            node_string : str
+                    a string of the Node with some of its attributes
+        '''
+
         node_string = "Title: " + self.title + ", Year: " + str(self.year) + ", Abstract: " + str(self.abstract) + "Edge_dict: " + str(self.edge_dict)
         return node_string
 

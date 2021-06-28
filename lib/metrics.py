@@ -1,7 +1,30 @@
 import pandas as pd
 from datetime import datetime
 
-def growth_index(cluster, total_doc, max_year, min_year):
+def growth_index(cluster, total_doc, min_year, max_year):
+    ''' Generates the growth index of the cluster
+
+        Parameters
+        -------------
+        cluster : pandas DataFrame
+                cluster DataFrame containing each publication in the cluster
+
+        total_doc : int
+                total number of documents retrieved
+            
+        min_year : int
+                the earliest year to limit the period of publication years
+
+        max_year : int
+                the latest year to limit the period of publication years 
+
+        Returns
+        ----------
+        growth : float
+                the growth index of the cluster
+
+    '''
+
     no_of_doc_cluster = len(cluster.index)
     cluster_percentage = no_of_doc_cluster / total_doc
     data_collection_period = max_year - min_year
@@ -17,24 +40,57 @@ def growth_index(cluster, total_doc, max_year, min_year):
             sum_of_growth = current_year_count
             break
 
-    growth_index = cluster_percentage * (sum_of_growth / ((data_collection_period - 1) * 100))
+    growth = cluster_percentage * (sum_of_growth / ((data_collection_period - 1) * 100))
     # print(cluster_percentage)
     # print(sum_of_growth)
-    return growth_index
+    return growth
 
 def impact_index(cluster):
+    ''' Generates the impact index of the cluster
+
+        Parameters
+        ------------
+        cluster : pandas DataFrame
+                cluster DataFrame containing each publication in the cluster
+
+        Returns
+        -----------
+        growth : float
+                the impact index of the cluster
+
+    '''
     times_cited = cluster["No_of_citations"].sum()
     cluster_size = len(cluster.index)
-    impact_index = times_cited / cluster_size
-    return impact_index
+    impact = times_cited / cluster_size
+    return impact
 
 # def sci_based_index():
 #     return None
 
-def get_cluster_type(cluster, year_range):
+def get_cluster_type(cluster, min_year, max_year):
+    ''' Generates the cluster type based on 3 conditions
+
+        Parameters
+        ------------
+        cluster : pandas DataFrame
+                cluster DataFrame containing each publication in the cluster
+
+        min_year : int
+                the earliest year to limit the period of publication years
+
+        max_year : int
+                the latest year to limit the period of publication years 
+
+        Returns
+        ----------
+        cluster_type : str
+                the cluster type based on the analysis of the cluster
+    '''
+    
     recently_emerging_counter = 0
     persistent_emerging_counter = set()
     current_year = datetime.now().year
+    year_range = max_year - min_year
     for index, row in cluster.iterrows():
         published_year = row["Year"]
         if published_year == 0:

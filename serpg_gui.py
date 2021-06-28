@@ -209,9 +209,9 @@ class Application(tk.Frame):
                                                                 max_year))
         return btn
 
-    def retrieve_info_button(self, frame, save_folder, topic, min_year, max_year, root_doc, cite_doc):
+    def retrieve_info_button(self, frame, save_folder, topic, key, min_year, max_year, root_doc, cite_doc):
         btn = btn = tk.Button(master=frame, text="Retrieve Info",
-                              command=lambda: self.get_google_data(save_folder, topic,
+                              command=lambda: self.get_google_data(save_folder, topic, key,
                                                                    min_year, max_year,
                                                                    root_doc, cite_doc))
         return btn
@@ -341,16 +341,20 @@ def is_valid_number(input):
 
 def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_limit):
     total_retrieved = 0
+    app.update_output_message("Starting retrieval of data")
+    app.master.update()
     alldata_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id']
     alldata_df = pd.DataFrame(columns=alldata_col)
     main_data_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id', 'Type_of_Pub', 'Citing_pubs_id']
     main_data_df = pd.DataFrame(columns=main_data_col)
-    
-    app.update_output_message("Starting retrieval of data")
+
     app.progress_bar["value"] = 10
     app.master.update()
-
+    limit = int(limit)
+    citation_limit = int(citation_limit)
     while (total_retrieved < limit):
+        app.update_output_message("Connecting Google Scholar")
+        app.master.update()
         remainder = limit - total_retrieved
         num_to_retrieve = 20 if remainder >= 20 else remainder
         alldata, mainpubs = serpg.retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_limit, total_retrieved)
@@ -376,24 +380,32 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
 def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
     min_year = int(min_year)
     max_year = int(max_year)
+    app.update_output_message("Starting retrieval of data")
+    app.master.update()
     alldata_df = pd.read_excel(alldata_file)
     mainpubs_df = pd.read_excel(mainpubs_file)
+    
 
     no_of_topics = int(len(alldata_df.index) * 0.05)   # 5% of all publications in the topic
     topics, lda_model, dictionary = topic_model.prepare_topics(alldata_df, no_of_topics)
     alldata_df = analysis.tag_pubs_to_topics(alldata_df, lda_model, dictionary)
 
     app.update_output_message("Creating Network file now")
-    app.progress_bar["value"] = 20
+    app.progress_bar["value"] = 10
     app.master.update()
 
     node_dict = analysis.create_nodes(alldata_df, mainpubs_df)
+    app.update_output_message("Number of nodes: " + str(len(node_dict.keys())))
+    app.progress_bar["value"] = 15
+    app.master.update()
     connected_nodes_list, components = analysis.create_network_file(node_dict, alldata_df)
+
+    app.progress_bar["value"] = 20
+    app.master.update()
 
     word_bank = textminer.mine_word_bank(alldata_df, "Title", "Abstract")
     clusters = {}
     linegraph_data_dict = {}
-    no_of_doc = len(alldata_df.index)
     for x in range(0, len(components)):
         app.update_output_message("Analysing Component " + str(x))
         app.progress_bar["value"] += (70/len(components))
@@ -402,7 +414,7 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
         cluster = components[x]
         cluster_no = x + 1
         cluster_name, cluster_df, linegraph_data = analysis.create_cluster_indi_2(components[x], cluster_no, 
-                                                                                    alldata_df, word_bank, no_of_doc, 
+                                                                                    alldata_df, word_bank,
                                                                                     min_year, max_year, lda_model, dictionary)
         clusters[cluster_name] = cluster_df
         linegraph_data_dict[cluster_name] = linegraph_data
