@@ -23,6 +23,22 @@ TOKENIZER = RegexpTokenizer(r"\w+")
 #     return cluster_word_list, cluster_name
 
 def filter_stopwords(words):
+    ''' Removes stopwords from a list of words and creates a dictionary of word as keys and word frequency as values
+
+        Parameters
+        ------------
+        words : list
+                A list of words
+
+        Returns
+        -----------
+        word_dict : dict
+                A dictionary of words as keys and word frequency as values
+
+        no_of_words : int
+                The number of words after stopwords have been removed
+    '''
+
     word_dict = {}
     filtered_words = []
     stop_words = set(stopwords.words("english"))
@@ -40,6 +56,34 @@ def filter_stopwords(words):
 
 
 def mine_cluster(cluster, word_bank, total_no_of_doc, *args):
+    ''' Analyses a cluster to generate a dictionary of word as keys and tf_idf value as value,
+        cluster name based on top two tf_idf value words and the list of words in the cluster
+
+        Parameters
+        -----------
+        cluster : pandas DataFrame
+                cluster dataframe that contain publication information
+
+        word_bank : dict
+                a dictionary of word as keys and frequency as values for all documents in analysis
+
+        total_no_of_doc : int
+                the total number of documents in analysis
+
+        *args : Column headers of information that user wants to extract. eg. "Title", "Abstract"
+
+        Returns
+        ----------
+        word_dict : dict 
+                a dictionary of word as key and frequency as value for the specific cluster
+
+        cluster_name : str
+                the cluster name formed from the top two words with the highest tf-idf values
+
+        raw_word_list : list
+                a list of words in the cluster with stopwords removed
+    '''
+
     words = []
     word_dict = {}
     for index, row in cluster.iterrows():
@@ -65,6 +109,22 @@ def mine_cluster(cluster, word_bank, total_no_of_doc, *args):
 
     
 def mine_word_bank(alldata_df, *args):
+    ''' Prepares a dictionary of words as keys and word frequency as values 
+        for the entire dataframe provided
+
+        Parameters
+        -----------
+        alldata_df : pandas DataFrame
+                the dataframe containing publication information of all publications retrieved
+
+        *args : Column headers of information that user wants to extract. eg. "Title", "Abstract"
+
+        Returns
+        ----------
+        filtered_words : dict
+                A dictionary of words as keys and frequency as values
+    '''
+
     words = []
     for index, row in alldata_df.iterrows():
         for arg in args:
@@ -74,14 +134,64 @@ def mine_word_bank(alldata_df, *args):
 
 
 def term_freq(word_count, no_of_words):
+    ''' Calculates the term frequency of a word
+
+        Parameters
+        ------------
+        word_count : int
+                count of a specific word
+
+        no_of_words : int
+                total number of words in the analysis
+
+        Returns
+        ----------
+        term frequency of the word
+    '''
+
     return word_count / no_of_words
 
 
 def inv_doc_freq(word_count, no_of_doc):
+    ''' Calculates the inverse document frequency of a word
+
+        Parameters
+        -----------
+        word_count : int
+                count of the word
+
+        no_of_doc : int
+                total number of documents in the analysis
+
+        Returns
+        ----------
+        inverse document frequency of the word
+    '''
+
     return np.log(no_of_doc/(word_count + 1))
 
 
 def tf_idf(word_count, doc_word_count, total_word_count, no_of_doc):
+    ''' Calculates the tf_idf value of a word
+
+        Parameters
+        -----------
+        word_count : int
+                count of the word
+
+        doc_word_count : int
+                total word count of the document
+
+        total_word_count : int
+                total word count of the 
+
+        no_of_doc : int
+
+        Returns
+        ----------
+        tf_idf : float
+                tf_idf value of the word
+    '''
     tf = term_freq(word_count, doc_word_count)
     idf = inv_doc_freq(total_word_count, no_of_doc)
     tf_idf = tf * idf

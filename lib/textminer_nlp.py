@@ -5,6 +5,20 @@ from nltk.corpus import stopwords
 
 
 def _merge_cluster_abstracts(cluster):
+    ''' Merge all publication abstracts of a cluster into a single string
+        for easy string processing
+
+        Parameters
+        ------------
+        cluster : pandas DataFrame
+                    cluster pandas DataFrame containing publication information
+
+        Returns
+        -----------
+        merged_text : str
+                    a string of all abstracts of publications in a cluster
+    '''
+
     merged_text = ""
     for index, row in cluster.iterrows():
         text = row["Abstract"]
@@ -14,6 +28,23 @@ def _merge_cluster_abstracts(cluster):
 
 
 def _create_freq_matrix(sentences):
+    ''' Creates a word frequency matrix after processing each
+        word by removing stopwords and stemming remaining words for
+        every sentence provided.
+
+
+        Parameters
+        ------------
+        sentences : str
+                    sentence of words to be processed into a frequency matrix
+
+        Returns
+        ------------
+        freq_matrix : dict of dict
+                    A dictionary of sentence as keys and 
+                    dictionary (of words as keys and frequency as value) as value
+    '''
+
     freq_matrix = {}
     stop_words = set(stopwords.words("english"))
     port_stemmer = PorterStemmer()
@@ -36,6 +67,20 @@ def _create_freq_matrix(sentences):
     return freq_matrix
 
 def _create_tf_matrix(freq_matrix):   #term frequency
+    ''' Creates a term frequency matrix which is defined by
+        word_count / total_no_of_words. 
+
+        Parameters
+        ------------
+        freq_matrix : dict
+                    A dictionary of words as keys and frequency as values
+
+        Returns
+        -----------
+        tf_matrix : dict of dict
+                    A dictionary of sentence as keys and dictionary (of word as key and term frequency as value) as value
+    '''
+
     tf_matrix = {}
     for sent, f_table in freq_matrix.items():
         tf_table = {}
@@ -47,7 +92,21 @@ def _create_tf_matrix(freq_matrix):   #term frequency
 
     return tf_matrix
 
-def _create_doc_per_words(freq_matrix):   #preparatory table for IDF 
+def _create_doc_per_words(freq_matrix):   #preparatory table for IDF
+    ''' Creates a table of words and frequency of the words
+        occuring in the whole document
+
+        Parameters
+        -------------
+        freq_matrix : dict
+                    A dictionary of sentence and wordfrequency dictionary
+
+        Returns
+        ------------
+        word_per_doc_table : dict
+                    A dictionary of words as keys and frequency as values
+
+    ''' 
     word_per_doc_table = {}
 
     for sent, f_table in freq_matrix.items():
@@ -60,6 +119,26 @@ def _create_doc_per_words(freq_matrix):   #preparatory table for IDF
     return word_per_doc_table
 
 def _create_idf_matrix(freq_matrix, count_doc_per_words, total_documents):
+    ''' Creates an inverse document frequency matrix that tracks the inverse 
+        document frequency of a word, which is defined by log(total_document / number of documents containing the word)
+
+        Parameters
+        ------------
+        freq_matrix : dict
+                    A dictionary of sentence as key and word frequency dictionary as value
+
+        count_doc_per_words : dict
+                    A dictionary of words as keys and frequency as values for the whole document
+
+        total_documents : int
+                    The total number of documents present in analysis
+
+        Returns
+        ----------
+        idf_matrix : dict of dict
+                    A dictionary of sentence as key and dictionary (of word as keys and idf as value) as value
+    '''
+
     idf_matrix = {}
 
     for sent, f_table in freq_matrix.items():
@@ -74,6 +153,23 @@ def _create_idf_matrix(freq_matrix, count_doc_per_words, total_documents):
     return idf_matrix
 
 def _create_tfidf_matrix(tf_matrix, idf_matrix):
+    ''' Generates a tfidf matrix that tracks the tf_idf score for each word in the sentence
+        tf_idf is defined as term frequency * inverse document frequency
+
+        Parameters
+        ------------
+        tf_matrix : dict of dict
+                    A dictionary of sentence as keys and dictionary (of word as key and term frequency as value) as value
+
+        idf_matrix : dict of dict
+                    A dictionary of sentence as key and dictionary (of word as keys and idf as value) as value
+
+        Returns
+        ------------
+        tf_idf_matrix : dict of dict
+                    A dictionary of sentence as key and dictionary (of word as key and tf_idf as value) as value
+    '''
+
     tf_idf_matrix = {}
     for (sent1, f_table1), (sent2, f_table2) in zip(tf_matrix.items(), idf_matrix.items()):
         tf_idf_table = {}
@@ -85,6 +181,17 @@ def _create_tfidf_matrix(tf_matrix, idf_matrix):
     return tf_idf_matrix
 
 def _score_sentences(tf_idf_matrix):
+    ''' Scores each sentence using the sum of tf_idf value of each word in the sentence
+
+        Parameters
+        ------------
+        tf_idf_matrix : dict of dict
+                    A dictionary of sentence as key and dictionary (of word as key and tf_idf as value) as value
+
+        sentencevalue : dict
+                    A dictionary of sentence as key and summation of tf_idf value of each word in the sentence as value
+    '''
+
     sentencevalue = {}
 
     for sent, f_table in tf_idf_matrix.items():
@@ -99,6 +206,19 @@ def _score_sentences(tf_idf_matrix):
     return sentencevalue
 
 def _find_average_score(sentencevalue):
+    ''' Get the average score of all sentences
+        
+        Parameters
+        ------------
+        sentencevalue : dict 
+                    A dictionary of sentence as key and summation of tf_idf value of each word in the sentence as value
+
+        Returns
+        -----------
+        average : float
+                    The average sentence score in the whole dictionary
+    '''
+
     sum_values = 0
     for entry in sentencevalue:
         sum_values += sentencevalue[entry]
@@ -108,6 +228,28 @@ def _find_average_score(sentencevalue):
     return average
 
 def _generate_summary(sentences, sentencevalue, threshold):
+    ''' Generates a summary by selecting sentences which sentence value exceeds the threshold
+        which is defined by (threshold * average value)
+
+        Parameters
+        ------------
+        sentences : list
+                List of strings as sentences
+
+        sentencevalue : dict
+                A dictionary of sentence as key and summation of tf_idf value of each word in the sentence as value
+
+        threshold : float
+                A value provided as a multipler to adjust the threshold which is defined by
+                (threshold * average sentence score)
+
+        Returns
+        ------------
+        summary : str
+                A string of sentences consisting of sentences that fulfill the threshold value
+
+    '''
+
     sentence_count = 0
     summary = ""
 
@@ -119,6 +261,24 @@ def _generate_summary(sentences, sentencevalue, threshold):
     return summary
 
 def create_extractive_summary(cluster, threshold):
+    ''' Creates a extractive summary using TF-IDF to score each sentence, then picking 
+        out sentences that fulfill the threshold.
+
+        Parameters
+        ------------
+        cluster : pandas DataFrame
+                cluster dataframe containing publication information
+
+        threshold : float
+                A value provided as a multipler to adjust the threshold which is defined by
+                (threshold * average sentence score)
+
+        Returns
+        -----------
+        summary : str
+                A string of sentences consisting of sentences that fulfill the threshold value
+    '''
+    
     merged_text = _merge_cluster_abstracts(cluster)
     sentences = sent_tokenize(merged_text)
     total_documents = len(sentences)
