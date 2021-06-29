@@ -94,7 +94,7 @@ def mine_cluster(cluster, word_bank, total_no_of_doc, *args):
         actual_word = word
         word_count = filtered_words[word]
         total_word_count = word_bank[word]
-        value = tf_idf(word_count, doc_word_count, total_word_count, total_no_of_doc)
+        value = tf_idf(word_count, doc_word_count, total_word_count, total_no_of_doc)  
         word_dict[word] = value
 
     word_tuple_list_desc = sorted(word_dict.items(), key=lambda x: x[1], reverse=True)
@@ -152,7 +152,7 @@ def term_freq(word_count, no_of_words):
     return word_count / no_of_words
 
 
-def inv_doc_freq(word_count, no_of_doc):
+def inv_doc_freq(total_no_of_doc, no_of_doc_count):
     ''' Calculates the inverse document frequency of a word
 
         Parameters
@@ -168,7 +168,7 @@ def inv_doc_freq(word_count, no_of_doc):
         inverse document frequency of the word
     '''
 
-    return np.log(no_of_doc/(word_count + 1))
+    return np.log(total_no_of_doc/(no_of_doc_count + 1))
 
 
 def tf_idf(word_count, doc_word_count, total_word_count, no_of_doc):
@@ -193,6 +193,6 @@ def tf_idf(word_count, doc_word_count, total_word_count, no_of_doc):
                 tf_idf value of the word
     '''
     tf = term_freq(word_count, doc_word_count)
-    idf = inv_doc_freq(total_word_count, no_of_doc)
+    idf = inv_doc_freq(no_of_doc, total_word_count)
     tf_idf = tf * idf
     return tf_idf

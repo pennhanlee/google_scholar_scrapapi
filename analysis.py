@@ -170,6 +170,7 @@ def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, l
     clusters = {}
     linegraph_data_dict = {}
     no_of_doc = len(alldata_df.index)
+    
     for x in range(0, len(components)):
         print("Starting analysis on Component " + str(x+1) + "/" + str(len(components)))
         cluster_no = x + 1
@@ -177,6 +178,7 @@ def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, l
         cluster_df = alldata_df[alldata_df["Title"].isin(cluster)]
         cluster_df.insert(len(cluster_df.columns), "Cluster", cluster_no)
         cluster_word_dict, cluster_name, raw_word_list = textminer.mine_cluster(cluster_df, word_bank, no_of_doc, "Title", "Abstract")
+        word_list = textminer_nlp.get_word_list(cluster_df, "Title", "Abstract")
         # cluster_summary = textminer_nlp.create_extractive_summary(cluster_df, 2)
         # print(cluster_name)
         # print(cluster_summary)
@@ -187,7 +189,7 @@ def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, l
         wordcloud_path = SAVEPATH + "/{}/wordcloud.png".format(cluster_name)
         cluster_df.to_excel(data_path, index=False)
         clusters[cluster_name] = cluster_df
-        graphcreator.generate_word_cloud(raw_word_list, wordcloud_path)
+        graphcreator.generate_word_cloud(word_list, wordcloud_path)
         linegraph_data = graphcreator.generate_year_linegraph(cluster_df, linegraph_path, min_year, max_year)
         linegraph_data_dict[cluster_name] = linegraph_data
         print("Completed analysis on Component " + str(x+1) + "/" + str(len(components)) + ": " + cluster_name)

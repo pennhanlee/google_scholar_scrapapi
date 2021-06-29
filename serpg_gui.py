@@ -24,6 +24,7 @@ class Application(tk.Frame):
         canvas = tk.Canvas(self.master, width=800, height=500)
         canvas.pack()
         self.sidebar, self.main_window, self.updates_window, self.progress_bar = self.create_frames()
+        self.style = ttk.Style()
         self.create_sidebar(self.sidebar, self.main_window)
         self.create_updates_window(self.updates_window)
         self.alldata_path = ""
@@ -343,37 +344,49 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
     total_retrieved = 0
     app.update_output_message("Starting retrieval of data")
     app.master.update()
-    alldata_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id']
-    alldata_df = pd.DataFrame(columns=alldata_col)
-    main_data_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id', 'Type_of_Pub', 'Citing_pubs_id']
-    main_data_df = pd.DataFrame(columns=main_data_col)
+    try:
+        alldata_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id']
+        alldata_df = pd.DataFrame(columns=alldata_col)
+        main_data_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id', 'Type_of_Pub', 'Citing_pubs_id']
+        main_data_df = pd.DataFrame(columns=main_data_col)
 
-    app.progress_bar["value"] = 10
-    app.master.update()
-    limit = int(limit)
-    citation_limit = int(citation_limit)
-    while (total_retrieved < limit):
-        app.update_output_message("Connecting Google Scholar")
+        app.progress_bar["value"] = 10
         app.master.update()
-        remainder = limit - total_retrieved
-        num_to_retrieve = 20 if remainder >= 20 else remainder
-        alldata, mainpubs = serpg.retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_limit, total_retrieved)
-        total_retrieved += len(mainpubs.keys())
-        alldata_df = serpg.add_to_df(alldata_df, alldata)
-        main_data_df = serpg.add_to_df(main_data_df, mainpubs)
+        limit = int(limit)
+        citation_limit = int(citation_limit)
+        while (total_retrieved < limit):
+            app.update_output_message("Connecting Google Scholar")
+            app.master.update()
+            remainder = limit - total_retrieved
+            num_to_retrieve = 20 if remainder >= 20 else remainder
+            alldata, mainpubs = serpg.retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_limit, total_retrieved)
+            print(len(alldata.items()))
+            print(len(mainpubs.items()))
+            
+            total_retrieved += len(mainpubs.keys())
+            alldata_df = serpg.add_to_df(alldata_df, alldata)
+            main_data_df = serpg.add_to_df(main_data_df, mainpubs)
 
-        app.update_output_message("Retrieved " + str(total_retrieved) + " number of documents")
-        app.progress_bar["value"] += (80/limit)
+            app.update_output_message("Retrieved " + str(total_retrieved) + " number of documents")
+            app.progress_bar["value"] += (80/limit)
+            app.master.update()
+
+        if (alldata_df.empty or main_data_df.empty):
+            raise Exception("No publications retrieved, please check Google Scholar API or Inputs")
+
+        alldata_path = savepath + "/alldata.xlsx"
+        alldata_df.to_excel(alldata_path, index=False)
+        mainpub_path = savepath + "/main_pubs.xlsx"
+        main_data_df.to_excel(mainpub_path, index=False)
+
+        app.update_output_message("Retrieval of data Complete")
+        app.progress_bar["value"] = 100
         app.master.update()
 
-    alldata_path = savepath + "/alldata.xlsx"
-    alldata_df.to_excel(alldata_path, index=False)
-    mainpub_path = savepath + "/main_pubs.xlsx"
-    main_data_df.to_excel(mainpub_path, index=False)
-
-    app.update_output_message("Retrieval of data Complete")
-    app.progress_bar["value"] = 100
-    app.master.update()
+    except Exception as err:
+        app.update_output_message("{}".format(err).upper())
+        app.progress_bar["value"] = 0
+        app.master.update()
 
     return 0
 
@@ -382,51 +395,57 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
     max_year = int(max_year)
     app.update_output_message("Starting retrieval of data")
     app.master.update()
-    alldata_df = pd.read_excel(alldata_file)
-    mainpubs_df = pd.read_excel(mainpubs_file)
-    
+    try: 
+        alldata_df = pd.read_excel(alldata_file)
+        mainpubs_df = pd.read_excel(mainpubs_file)
+        
 
-    no_of_topics = int(len(alldata_df.index) * 0.05)   # 5% of all publications in the topic
-    topics, lda_model, dictionary = topic_model.prepare_topics(alldata_df, no_of_topics)
-    alldata_df = analysis.tag_pubs_to_topics(alldata_df, lda_model, dictionary)
+        no_of_topics = int(len(alldata_df.index) * 0.05)   # 5% of all publications in the topic
+        topics, lda_model, dictionary = topic_model.prepare_topics(alldata_df, no_of_topics)
+        alldata_df = analysis.tag_pubs_to_topics(alldata_df, lda_model, dictionary)
 
-    app.update_output_message("Creating Network file now")
-    app.progress_bar["value"] = 10
-    app.master.update()
-
-    node_dict = analysis.create_nodes(alldata_df, mainpubs_df)
-    app.update_output_message("Number of nodes: " + str(len(node_dict.keys())))
-    app.progress_bar["value"] = 15
-    app.master.update()
-    connected_nodes_list, components = analysis.create_network_file(node_dict, alldata_df)
-
-    app.progress_bar["value"] = 20
-    app.master.update()
-
-    word_bank = textminer.mine_word_bank(alldata_df, "Title", "Abstract")
-    clusters = {}
-    linegraph_data_dict = {}
-    for x in range(0, len(components)):
-        app.update_output_message("Analysing Component " + str(x))
-        app.progress_bar["value"] += (70/len(components))
+        app.update_output_message("Creating Network file now")
+        app.progress_bar["value"] = 10
         app.master.update()
 
-        cluster = components[x]
-        cluster_no = x + 1
-        cluster_name, cluster_df, linegraph_data = analysis.create_cluster_indi_2(components[x], cluster_no, 
-                                                                                    alldata_df, word_bank,
-                                                                                    min_year, max_year, lda_model, dictionary)
-        clusters[cluster_name] = cluster_df
-        linegraph_data_dict[cluster_name] = linegraph_data
+        node_dict = analysis.create_nodes(alldata_df, mainpubs_df)
+        app.update_output_message("Number of nodes: " + str(len(node_dict.keys())))
+        app.progress_bar["value"] = 15
+        app.master.update()
+        connected_nodes_list, components = analysis.create_network_file(node_dict, alldata_df)
 
-    combined_df = pd.concat(clusters)
-    combineddata_path = savepath + "/combined_data.xlsx"
-    combined_df.to_excel(combineddata_path, index=False)
-    analysis.create_cluster_sum(clusters, linegraph_data_dict, min_year, max_year)
+        app.progress_bar["value"] = 20
+        app.master.update()
 
-    app.update_output_message("Analysis Completed")
-    app.progress_bar["value"] = 100
-    app.master.update()
+        word_bank = textminer.mine_word_bank(alldata_df, "Title", "Abstract")
+        clusters = {}
+        linegraph_data_dict = {}
+        for x in range(0, len(components)):
+            app.update_output_message("Analysing Component " + str(x))
+            app.progress_bar["value"] += (70/len(components))
+            app.master.update()
+
+            cluster = components[x]
+            cluster_no = x + 1
+            cluster_name, cluster_df, linegraph_data = analysis.create_cluster_indi_2(components[x], cluster_no, 
+                                                                                        alldata_df, word_bank,
+                                                                                        min_year, max_year, lda_model, dictionary)
+            clusters[cluster_name] = cluster_df
+            linegraph_data_dict[cluster_name] = linegraph_data
+
+        combined_df = pd.concat(clusters)
+        combineddata_path = savepath + "/combined_data.xlsx"
+        combined_df.to_excel(combineddata_path, index=False)
+        analysis.create_cluster_sum(clusters, linegraph_data_dict, min_year, max_year)
+
+        app.update_output_message("Analysis Completed")
+        app.progress_bar["value"] = 100
+        app.master.update()
+    except Exception as err:
+        app.update_output_message("{}".format(err).upper())
+        app.progress_bar["value"] = 0
+        app.master.update()
+
     # list_of_cluster_df, linegraph_data = analysis.create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, lda_model, dictionary)
     # analysis.create_cluster_sum(list_of_cluster_df, linegraph_data, min_year, max_year)
 

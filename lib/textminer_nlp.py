@@ -23,7 +23,8 @@ def _merge_cluster_abstracts(cluster):
     for index, row in cluster.iterrows():
         text = row["Abstract"]
         text = text.replace("...", ".")
-        merged_text = merged_text + text
+        title = row["Title"]
+        merged_text = merged_text + title + text
     return merged_text
 
 
@@ -294,3 +295,34 @@ def create_extractive_summary(cluster, threshold):
     summary = _generate_summary(sentences, sentence_scores, (threshold * average))
 
     return summary
+
+def create_tf_table(cluster_df):
+
+    return 0
+
+def create_idf_table(alldata_df):
+    idf_table = 0
+    return idf_table
+
+def get_cluster_name(alldata_df, components, no_of_words):
+    '''
+    1. Clean the tokens
+    2. Create a TF_table for words in the cluster
+    3. Create a IDF_table for words in alldata
+    4. Merge together and filter for only words in the cluster
+    5. Get the top 2 words in the cluster
+    '''
+    merged_text = _merge_cluster_abstracts(alldata_df)
+    words = word_tokenize(merged_text)
+    tf_table = create_tf_table(cluster_df)
+
+    return 0
+
+
+def get_word_list(cluster, *args):
+    words = []
+    for index, row in cluster.iterrows():
+        for arg in args:
+            words = words + word_tokenize(row[arg].lower())
+    words = [word for word in words not in stopwords]
+    return words

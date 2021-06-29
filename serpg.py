@@ -93,8 +93,10 @@ def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_li
             alldata_dict[result_id] = alldata_df_entry
             alldata_dict.update(node_data)
             maindata_dict[result_id] = main_df_entry
-
+            
     return alldata_dict, maindata_dict
+
+    
 
 
 def retrieve_docs(topic, min_year, max_year, limit, citation_limit, key):
