@@ -2,6 +2,9 @@ import math
 
 from nltk import sent_tokenize, word_tokenize, PorterStemmer
 from nltk.corpus import stopwords
+from nltk import RegexpTokenizer
+
+TOKENIZER = RegexpTokenizer(r"\w+")
 
 
 def _merge_cluster_abstracts(cluster):
@@ -52,7 +55,7 @@ def _create_freq_matrix(sentences):
 
     for sent in sentences:
         freq_table = {}
-        words = word_tokenize(sent)
+        words = TOKENIZER.tokenize(sent) 
         for word in words:
             word = word.lower()
             word = port_stemmer.stem(word)    #stem each word to calculate a more acc freq
@@ -296,33 +299,86 @@ def create_extractive_summary(cluster, threshold):
 
     return summary
 
-def create_tf_table(cluster_df):
+def create_tf_table(df, *args):
+    tf_table = {}
+    list_of_words = []
+    stop_words = set(stopwords.words("english"))
+    port_stemmer = PorterStemmer()
+    for index, row in df.iterrows():
+        for arg in args:
+            words = TOKENIZER.tokenize(row[arg]) 
+            list_of_words.extend(words)
 
-    return 0
+    for word in list_of_words:            #Get the frequency table
+        word = word.lower()
+        word = port_stemmer.stem(word)    #stem each word to calculate a more acc freq
+        if word in stop_words:
+            continue
 
-def create_idf_table(alldata_df):
-    idf_table = 0
+        if word in tf_table:
+            tf_table[word] += 1
+        else:
+            tf_table[word] = 1
+
+    num_of_words_in_cluster = sum(tf_table.values())   
+    for key, value in tf_table.items():          #convert to term frequency
+        tf_table[key] = (value / num_of_words_in_cluster)
+
+    return tf_table
+
+def create_idf_table(freq_tables, total_doc_count):
+    docs_per_word_table = {}
+    number_of_doc = 0
+    for table in freq_tables:
+        for word, tf_value in table.items():
+            if word in docs_per_word_table:
+                docs_per_word_table[word] += 1
+            else:
+                docs_per_word_table[word] = 1
+    idf_table = {}
+    for word, doc_count in docs_per_word_table.items():
+        idf_table[word] = math.log10(total_doc_count / float(doc_count))
     return idf_table
 
-def get_cluster_name(alldata_df, components, no_of_words):
-    '''
-    1. Clean the tokens
-    2. Create a TF_table for words in the cluster
-    3. Create a IDF_table for words in alldata
-    4. Merge together and filter for only words in the cluster
-    5. Get the top 2 words in the cluster
-    '''
-    merged_text = _merge_cluster_abstracts(alldata_df)
-    words = word_tokenize(merged_text)
-    tf_table = create_tf_table(cluster_df)
-
-    return 0
+def create_tf_idf_table(tf_table, idf_table):
+    tf_idf_table = {}
+    for word, tf_value in tf_table.items():
+        idf_value = idf_table[word]
+        tf_idf_table[word] = float(tf_value * idf_value)
+    return tf_idf_table
 
 
 def get_word_list(cluster, *args):
     words = []
+    filtered_words = []
+    stop_words = set(stopwords.words("english"))
     for index, row in cluster.iterrows():
         for arg in args:
             words = words + word_tokenize(row[arg].lower())
-    words = [word for word in words not in stopwords]
-    return words
+    for word in words:
+        if word in stop_words:
+            continue
+        else:
+            filtered_words.append(word)
+    return filtered_words
+
+def create_cluster_names(clusters, df, num_words, *args):
+    alldata_df = df
+    list_of_tf_table = []
+    cluster_names = []
+    total_doc_count = len(df.index)
+    for x in range(0, len(clusters)):
+        cluster = clusters[x]
+        cluster_df = alldata_df[alldata_df["Title"].isin(cluster)]
+        tf_table = create_tf_table(cluster_df, "Title", "Abstract")
+        list_of_tf_table.append(tf_table)
+
+    idf_table = create_idf_table(list_of_tf_table, total_doc_count)
+    for tf_table in list_of_tf_table:
+        tf_idf_table = create_tf_idf_table(tf_table, idf_table)
+        tf_idf_ordered_list = sorted(tf_idf_table.items(), key = lambda item:item[1])
+        cluster_name = " ".join([tf_idf_ordered_list[x][0] for x in range(0, num_words)])
+        cluster_names.append(cluster_name)
+        print(cluster_name)
+
+    return cluster_names

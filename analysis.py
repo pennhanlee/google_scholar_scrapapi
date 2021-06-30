@@ -64,7 +64,7 @@ def create_nodes(alldata_df, mainpubs_df):
     return full_node_dict
 
 
-def create_network_file(node_dict, alldata_df):
+def create_network_file(node_dict, alldata_df, savepath):
     ''' Creates a network .xlsx file to be used for visualisation on Cytoscape
         columns: ['Publication_1', 'Publication_2', 'Weight', 'Topic Number', 'Topic']
 
@@ -90,7 +90,6 @@ def create_network_file(node_dict, alldata_df):
     node_in_network = set()
     counter = 1;
     for node in node_dict.values():
-        print(counter)
         bib_couple_dict = node.edge_dict
         pub_title = node.title
         pub_topic_no = node.topic_no
@@ -108,7 +107,6 @@ def create_network_file(node_dict, alldata_df):
         if not added_to_graph:
             connected_nodes.append([pub_title, pub_title, 0, -1, "No Topic Assigned"])  #Putting the node into the network to make sure it is not excluded. 
 
-        counter += 1
     col = ['Publication_1', 'Publication_2', 'Weight', 'Topic Number', 'Topic']
     network_df = pd.DataFrame(data=connected_nodes, columns=col)
     network_graph = _create_graph(connected_nodes) #create graph to apply clustering algo
@@ -121,7 +119,7 @@ def create_network_file(node_dict, alldata_df):
         temp_df.insert(len(temp_df.columns), "Cluster", cluster_id)
         temp_df_list.append(temp_df)
     network_df = pd.concat(temp_df_list)
-    path = SAVEPATH + "/network.xlsx"
+    path = savepath + "/network.xlsx"
     network_df.to_excel(path, index=False)
     return connected_nodes, components
 
@@ -199,7 +197,7 @@ def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, l
     
     return clusters, linegraph_data_dict
 
-def create_cluster_indi_2(cluster, cluster_no, alldata_df, word_bank, min_year, max_year, lda_model, dictionary):
+def create_cluster_indi_2(cluster, cluster_no, cluster_name, alldata_df, min_year, max_year, lda_model, dictionary, savepath):
     ''' Analyses entries of one cluster in the publications DataFrame and groups the entries into
         a dataframe. Creates wordcloud and linegraph for this cluster.
         To be used together with GUI for GUI to track each cluster iteration for UX feature 
@@ -248,22 +246,22 @@ def create_cluster_indi_2(cluster, cluster_no, alldata_df, word_bank, min_year, 
     no_of_doc = len(alldata_df.index)
     cluster_df = alldata_df[alldata_df["Title"].isin(cluster)]
     cluster_df.insert(len(cluster_df.columns), "Cluster", cluster_no)
-    cluster_word_dict, cluster_name, raw_word_list = textminer.mine_cluster(cluster_df, word_bank, no_of_doc, "Title", "Abstract")
+    word_list = textminer_nlp.get_word_list(cluster_df, "Title", "Abstract")
     # cluster_summary = textminer_nlp.create_extractive_summary(cluster_df, 2)
     # print(cluster_name)
     # print(cluster_summary)
-    if not os.path.exists(SAVEPATH + "/{}".format(cluster_name)):
-        os.makedirs(SAVEPATH + "/{}".format(cluster_name))
-    data_path = SAVEPATH + "/{}/{}.xlsx".format(cluster_name, cluster_name)
-    linegraph_path = SAVEPATH + "/{}/linegraph.png".format(cluster_name)
-    wordcloud_path = SAVEPATH + "/{}/wordcloud.png".format(cluster_name)
+    if not os.path.exists(savepath + "/{}".format(cluster_name)):
+        os.makedirs(savepath + "/{}".format(cluster_name))
+    data_path = savepath + "/{}/{}.xlsx".format(cluster_name, cluster_name)
+    linegraph_path = savepath + "/{}/linegraph.png".format(cluster_name)
+    wordcloud_path = savepath + "/{}/wordcloud.png".format(cluster_name)
     cluster_df.to_excel(data_path, index=False)
-    graphcreator.generate_word_cloud(raw_word_list, wordcloud_path)
+    graphcreator.generate_word_cloud(word_list, wordcloud_path)
     linegraph_data = graphcreator.generate_year_linegraph(cluster_df, linegraph_path, min_year, max_year)
 
-    return cluster_name, cluster_df, linegraph_data
+    return cluster_df, linegraph_data
 
-def create_cluster_sum(clusters_dict, linegraph_data, min_year, max_year):
+def create_cluster_sum(clusters_dict, linegraph_data, min_year, max_year, savepath):
     ''' Creates a summary of each cluster that includes cluster metrics
         and saves an .xlsx file of this summary
 
@@ -302,8 +300,8 @@ def create_cluster_sum(clusters_dict, linegraph_data, min_year, max_year):
 
     col=['Name', 'Type', 'Size', 'Growth Index', 'Impact Index']
     cluster_sum_df = pd.DataFrame(cluster_summary, columns=col)
-    data_path = SAVEPATH + "/summary.xlsx"
-    linegraph_path = SAVEPATH + "/combined_linegraph.png"
+    data_path = savepath + "/summary.xlsx"
+    linegraph_path = savepath + "/combined_linegraph.png"
     cluster_sum_df.to_excel(data_path, index=False)
     graphcreator.generate_summary_linegraph(linegraph_data, linegraph_path)
     return cluster_sum_df

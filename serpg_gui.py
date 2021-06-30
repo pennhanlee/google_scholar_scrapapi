@@ -10,6 +10,7 @@ import serpg
 import analysis
 import lib.topic_model as topic_model
 import lib.textminer as textminer
+import lib.textminer_nlp as textminer_nlp
 
 SIDEBAR_LIGHTGREY = "#d4d4d4"
 MAINWINDOW_WHITE = "#ffffff"
@@ -354,14 +355,13 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
         app.master.update()
         limit = int(limit)
         citation_limit = int(citation_limit)
+        app.update_output_message("Connecting Google Scholar")
+        app.master.update()
+        remainder = limit - total_retrieved
         while (total_retrieved < limit):
-            app.update_output_message("Connecting Google Scholar")
-            app.master.update()
-            remainder = limit - total_retrieved
+            
             num_to_retrieve = 20 if remainder >= 20 else remainder
             alldata, mainpubs = serpg.retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_limit, total_retrieved)
-            print(len(alldata.items()))
-            print(len(mainpubs.items()))
             
             total_retrieved += len(mainpubs.keys())
             alldata_df = serpg.add_to_df(alldata_df, alldata)
@@ -400,7 +400,7 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
         mainpubs_df = pd.read_excel(mainpubs_file)
         
 
-        no_of_topics = int(len(alldata_df.index) * 0.05)   # 5% of all publications in the topic
+        no_of_topics = int(len(alldata_df.index) * 0.10)   # 10% of all publications in the topic
         topics, lda_model, dictionary = topic_model.prepare_topics(alldata_df, no_of_topics)
         alldata_df = analysis.tag_pubs_to_topics(alldata_df, lda_model, dictionary)
 
@@ -412,36 +412,41 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
         app.update_output_message("Number of nodes: " + str(len(node_dict.keys())))
         app.progress_bar["value"] = 15
         app.master.update()
-        connected_nodes_list, components = analysis.create_network_file(node_dict, alldata_df)
+        connected_nodes_list, components = analysis.create_network_file(node_dict, alldata_df, savepath)
 
         app.progress_bar["value"] = 20
         app.master.update()
 
-        word_bank = textminer.mine_word_bank(alldata_df, "Title", "Abstract")
+        cluster_names = textminer_nlp.create_cluster_names(components, alldata_df, 2, "Title", "Abstract")
         clusters = {}
         linegraph_data_dict = {}
         for x in range(0, len(components)):
-            app.update_output_message("Analysing Component " + str(x))
-            app.progress_bar["value"] += (70/len(components))
-            app.master.update()
 
             cluster = components[x]
             cluster_no = x + 1
-            cluster_name, cluster_df, linegraph_data = analysis.create_cluster_indi_2(components[x], cluster_no, 
-                                                                                        alldata_df, word_bank,
-                                                                                        min_year, max_year, lda_model, dictionary)
+            cluster_name = cluster_names[x]
+            
+            app.update_output_message("Analysing Component " + str(cluster_no) + ": " + cluster_name)
+            app.progress_bar["value"] += (70/len(components))
+            app.master.update()
+
+            
+            cluster_df, linegraph_data = analysis.create_cluster_indi_2(cluster, cluster_no, cluster_name,
+                                                                        alldata_df, min_year, max_year, 
+                                                                        lda_model, dictionary, savepath)
             clusters[cluster_name] = cluster_df
             linegraph_data_dict[cluster_name] = linegraph_data
 
         combined_df = pd.concat(clusters)
         combineddata_path = savepath + "/combined_data.xlsx"
         combined_df.to_excel(combineddata_path, index=False)
-        analysis.create_cluster_sum(clusters, linegraph_data_dict, min_year, max_year)
+        analysis.create_cluster_sum(clusters, linegraph_data_dict, min_year, max_year, savepath)
 
         app.update_output_message("Analysis Completed")
         app.progress_bar["value"] = 100
         app.master.update()
     except Exception as err:
+        raise Exception
         app.update_output_message("{}".format(err).upper())
         app.progress_bar["value"] = 0
         app.master.update()
