@@ -64,7 +64,7 @@ def create_nodes(alldata_df, mainpubs_df):
     return full_node_dict
 
 
-def create_network_file(node_dict, alldata_df, savepath):
+def create_network_file(node_dict, alldata_df, min_strength, savepath):
     ''' Creates a network .xlsx file to be used for visualisation on Cytoscape
         columns: ['Publication_1', 'Publication_2', 'Weight', 'Topic Number', 'Topic']
 
@@ -77,6 +77,12 @@ def create_network_file(node_dict, alldata_df, savepath):
         alldata_df : pandas DataFrame
                 a DataFrame containing all publications extracted
                 columns : ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id']
+
+        min_strength: int
+                the minimum coupling strength to add this edge into the graph
+
+        savepath: str
+                the path to the folder to save this cluster
 
         Returns : 
         connected_nodes : list
@@ -99,7 +105,7 @@ def create_network_file(node_dict, alldata_df, savepath):
         for couple_id, couple_edge_weight in bib_couple_dict.items():
             couple_pub = alldata_df.loc[alldata_df["Result_id"] == couple_id]
             couple_pub_title = couple_pub.iloc[0]["Title"]
-            if (couple_pub_title in node_in_network):   #To avoid duplication of edges ( A - B and B - A )
+            if (couple_pub_title in node_in_network) or couple_edge_weight < min_strength:   #To avoid duplication of edges ( A - B and B - A )
                 continue
             else:
                 connected_nodes.append([pub_title, couple_pub_title, couple_edge_weight, pub_topic_no, pub_topic])
@@ -279,6 +285,9 @@ def create_cluster_sum(clusters_dict, linegraph_data, min_year, max_year, savepa
 
         max_year : int
                 the latest year to limit the period of publication retrieval
+
+        savepath : str
+                the path to the folder to save this cluster
 
         Returns
         ------------

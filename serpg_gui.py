@@ -18,6 +18,49 @@ ERROR_COLOUR = "#fa8072"
 
 
 class Application(tk.Frame):
+    ''' Class: Application
+        -------------------
+        This is a tkinter class to instantiate a GUI instance for Bib Coupling programme. 
+
+        Attributes
+        -------------------
+
+
+        
+        Methods
+        -------------------
+        create_frames: create frames that will hold widgets for GUI
+
+        create_sidebar: create sidebar widgets in the frame
+
+        create_serpapi_btn: create button to trigger a set of widget creation
+
+        create_cite_analysis_btn: create button to trigger a set of widget creation
+
+        create_updates_window: create updatewindow as a frame
+
+        update_output_message: updates the update window with a new message
+
+        create_mainframe_analysis: creates the widgets for analysis in the mainframe
+
+        create_mainframe_data: creates the widgets for data retrieval in the mainframe
+
+        get_file_button: create button to open file explorer for a file
+
+        get_folder_button: create button to open file explorer for a folder
+
+        get_analysis_button: create button that will trigger analysis script
+
+        retrieve_info_button: create button that will trigger data retrieval
+
+        retrieve_file: opens file explorer for a file
+
+        retrieve_folder: opens file explorer for a folder
+
+        analyse_data: initiates analysis script
+
+        get_google_data: initiates data retrieval script
+    '''
     def __init__(self, master=None):
         super().__init__(master)
         self.pack()
@@ -33,6 +76,27 @@ class Application(tk.Frame):
         self.savefolder_path = ""
 
     def create_frames(self):
+        ''' creates frames: Sidebar, UpdateWindow, MainWindow, Progressbar
+
+        Parameters
+        -----------
+        None
+
+        Returns
+        -----------
+        sidebar: Frame
+                The frame that has the attributes for the sidebar
+
+        updates_window: Frame
+                The frame that has the attributes for the updates window
+
+        main_window: Frame
+                The frame that has the attributes for the main window
+
+        progress: ttk.Progressbar
+                The ttk.Progressbar object
+        '''
+
         sidebar = tk.Frame(self.master, bg=SIDEBAR_LIGHTGREY)
         sidebar.place(relx=0, rely=0.5, relwidth=0.25, relheight=1, anchor="w")
 
@@ -48,6 +112,18 @@ class Application(tk.Frame):
         return sidebar, main_window, updates_window, progress
 
     def create_sidebar(self, frame, mainwindow):
+        ''' Creates the sidebar widgets
+
+        Parameters
+        ------------
+        None
+
+        Returns
+        -------------
+        None
+
+        '''
+
         inst_text = "What would you \n like to do?"
         instructions = tk.Label(frame, text=inst_text, bg=SIDEBAR_LIGHTGREY)
         instructions.place(relx=0.2, rely=0.1, relwidth=0.5, relheight=0.3)
@@ -55,6 +131,19 @@ class Application(tk.Frame):
         self.create_cite_analysis_btn(frame, mainwindow)
 
     def create_serpapi_btn(self, frame, mainwindow):
+        ''' Creates the button that will trigger the creation of widgets for data retrieval in the
+        main widow
+
+        Parameters
+        ------------
+        None
+
+        Returns
+        -------------
+        None
+
+        '''
+
         get_folder = tk.StringVar()
         browse_btn = tk.Button(master=frame, textvariable=get_folder,
                                command=lambda: self.create_mainframe_data(mainwindow))
@@ -62,6 +151,19 @@ class Application(tk.Frame):
         browse_btn.place(relx=0.2, rely=0.5, relwidth=0.5, relheight=0.1)
 
     def create_cite_analysis_btn(self, frame, mainwindow):
+        ''' Creates the button that will trigger the creation of widgets for data analysis in the
+        main window
+
+        Parameters
+        ------------
+        None
+
+        Returns
+        -------------
+        None
+
+        '''
+
         get_file = tk.StringVar()
         browse_file = tk.Button(master=frame, textvariable=get_file,
                                 command=lambda: self.create_mainframe_analysis(
@@ -71,6 +173,18 @@ class Application(tk.Frame):
         browse_file.place(relx=0.2, rely=0.7, relwidth=0.5, relheight=0.1)
 
     def create_updates_window(self, frame):
+        ''' Creates the button that will trigger the creation of widgets for Updates Window
+
+        Parameters
+        ------------
+        None
+
+        Returns
+        -------------
+        None
+
+        '''
+
         text = tk.Text(frame)
         text.place(relx=0.0, rely=0.05, relwidth=1, relheight=0.95)
         frame.textbox = [text]
@@ -78,12 +192,36 @@ class Application(tk.Frame):
         return 0
     
     def update_output_message(self, message):
+        ''' Updates the update window with a new message
+
+        Parameters
+        ------------
+        message: str
+                The message that will be updated and shown on update window
+
+        Returns
+        -------------
+        None
+
+        '''
         for text in self.updates_window.textbox:
             text.delete("1.0", tk.END)
             text.insert(tk.END, message)
         return 0
 
     def create_mainframe_analysis(self, frame):
+        ''' Creates the mainframe widgets for data analysis
+
+        Parameters
+        ------------
+        None
+
+        Returns
+        -------------
+        None
+
+        '''
+
         for widget in frame.winfo_children():
             widget.destroy()
 
@@ -135,6 +273,18 @@ class Application(tk.Frame):
         return 0
 
     def create_mainframe_data(self, frame):
+        ''' Creates the mainframe widgets for data retrieval
+
+        Parameters
+        ------------
+        None
+
+        Returns
+        -------------
+        None
+
+        '''
+
         for widget in frame.winfo_children():
             widget.destroy()
 
@@ -195,30 +345,126 @@ class Application(tk.Frame):
         return 0
 
     def get_file_button(self, frame, entry):
+        ''' Creates the button that will trigger the opening of a file explorer for a file location
+
+        Parameters
+        ------------
+        entry: widget
+                The entry widget that will store the file path
+
+        Returns
+        -------------
+        btn: button widget
+
+        '''
+
         btn = tk.Button(master=frame, text="Open",
                         command=lambda: self.retrieve_file(frame, entry))
         return btn
 
     def get_folder_button(self, frame, entry):
+        ''' Creates the button that will trigger the opening of a file explorer for a folder location
+
+        Parameters
+        ------------
+        entry: widget
+                The entry widget that will store the folder path
+
+        Returns
+        -------------
+        btn: button widget
+
+        '''
+
         btn = tk.Button(master=frame, text="Open",
                         command=lambda: self.retrieve_folder(frame, entry))
         return btn
 
     def start_analysis_button(self, frame, alldata_path, mainpubs_path, save_path, min_year, max_year):
+        '''Creates a button that will trigger the data analysis
+
+        Parameters
+        -----------
+        alldata_path: str
+                the path to the alldata.xlsx file
+
+        mainpubs_path: str
+                the path to the mainpubs.xlsx file
+
+        savepath: str
+                the path to the folder to save this cluster
+
+        min_year : str
+                the earliest year to limit the period of publication retrieval
+
+        max_year : str
+                the latest year to limit the period of publication retrieval
+
+
+        Returns
+        -----------
+        btn: button widget
+
+        '''
+
         btn = btn = tk.Button(master=frame, text="Start Analysis",
                               command=lambda: self.analyse_data(alldata_path, mainpubs_path,
                                                                 save_path, min_year, 
                                                                 max_year))
         return btn
 
-    def retrieve_info_button(self, frame, save_folder, topic, key, min_year, max_year, root_doc, cite_doc):
+    def retrieve_info_button(self, frame, savepath, topic, key, min_year, max_year, root_doc, cite_doc):
+        '''Creates a button that will triggers the data analysis
+
+        Parameters
+        -----------
+        savepath: str
+                the path to the folder to save the retrieved data
+        
+        topic : str
+                the topic of interest
+
+        key : str
+                    the api key to connect SERPAPI successfully
+
+        min_year : int
+                    the earliest year to limit the period of publication retrieval
+
+        max_year : int
+                    the latest year to limit the period of publication retrieval
+
+        root_doc : int
+                    the number of publications wanted
+
+        cite_doc : int
+                    the number of citing publications wanted
+
+        Returns
+        -----------
+        btn: button widget
+        
+        '''
+
         btn = btn = tk.Button(master=frame, text="Retrieve Info",
-                              command=lambda: self.get_google_data(save_folder, topic, key,
+                              command=lambda: self.get_google_data(savepath, topic, key,
                                                                    min_year, max_year,
                                                                    root_doc, cite_doc))
         return btn
 
     def retrieve_file(self, frame, entry):
+        ''' Opens a file explorer to retrieve a file path
+
+        Parameters
+        -----------
+        entry: widget
+                The entry widget that will store the file path
+        
+        Returns
+        ---------
+        file: str
+                The file path
+        '''
+
         entry.config({"background": SIDEBAR_LIGHTGREY})
         file = askopenfile(parent=frame, title="Open file")
         entry.delete(0, tk.END)
@@ -226,6 +472,19 @@ class Application(tk.Frame):
         return file
 
     def retrieve_folder(self, frame, entry):
+        ''' Opens a file explorer to retrieve a folder path
+
+        Parameters
+        -----------
+        entry: widget
+                The entry widget that will store the folder path
+        
+        Returns
+        ---------
+        file: str
+                The folder path
+        '''
+
         entry.config({"background": SIDEBAR_LIGHTGREY})
         folder = askdirectory(parent=frame, title="Open folder")
         entry.delete(0, tk.END)
@@ -233,6 +492,32 @@ class Application(tk.Frame):
         return folder
 
     def analyse_data(self, alldata_path, mainpubs_path, save_path, min_year, max_year):
+        ''' Function that will initiate the analysis of data. This function will execute
+            input validation too.
+
+            Parameters
+            -----------
+            alldata_path: str
+                the path to the alldata.xlsx file
+
+            mainpubs_path: str
+                    the path to the mainpubs.xlsx file
+
+            savepath: str
+                    the path to the folder to save this cluster
+
+            min_year : str
+                    the earliest year to limit the period of publication retrieval
+
+            max_year : str
+                    the latest year to limit the period of publication retrieval
+
+            Returns
+            ----------
+            None
+
+        '''
+
         all_valid = True
         alldata_file = alldata_path.get()
         mainpubs_file = mainpubs_path.get()
@@ -276,9 +561,41 @@ class Application(tk.Frame):
             self.update_output_message(error_message)
             return "ERROR IN INPUTS"
 
-    def get_google_data(self, save_folder, topic, key, min_year, max_year, root_doc, cite_doc):
+    def get_google_data(self, savepath, topic, key, min_year, max_year, root_doc, cite_doc):
+        ''' Function that will initiate the analysis of data. This function will execute
+        input validation too.
+
+        Parameters
+        -----------
+        savepath: str
+                the path to the folder to save the retrieved data
+        
+        topic : str
+                the topic of interest
+
+        key : str
+                    the api key to connect SERPAPI successfully
+
+        min_year : int
+                    the earliest year to limit the period of publication retrieval
+
+        max_year : int
+                    the latest year to limit the period of publication retrieval
+
+        root_doc : int
+                    the number of publications wanted
+
+        cite_doc : int
+                    the number of citing publications wanted
+
+        Returns
+        ----------
+        None
+
+        '''
+
         all_valid = True
-        folder_path = save_folder.get()
+        folder_path = savepath.get()
         query_topic = topic.get()
         api_key = key.get()
         minimum_year = min_year.get()
@@ -287,7 +604,7 @@ class Application(tk.Frame):
         no_of_cite_doc = cite_doc.get()
         error_message = ""
         if (len(folder_path) == 0) or not path.exists(folder_path):
-            save_folder.config({'background': ERROR_COLOUR})
+            savepath.config({'background': ERROR_COLOUR})
             error_message += "Folder path does not exist. \n"
             all_valid = False
 
@@ -322,7 +639,7 @@ class Application(tk.Frame):
             all_valid = False
 
         if (all_valid):
-            all_entry = [save_folder, topic, min_year, max_year, root_doc, cite_doc]
+            all_entry = [savepath, topic, min_year, max_year, root_doc, cite_doc]
             for entry in all_entry:
                 entry.config({'background': SIDEBAR_LIGHTGREY})
 
@@ -412,7 +729,8 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
         app.update_output_message("Number of nodes: " + str(len(node_dict.keys())))
         app.progress_bar["value"] = 15
         app.master.update()
-        connected_nodes_list, components = analysis.create_network_file(node_dict, alldata_df, savepath)
+        MIN_STRENGTH = 2; 
+        connected_nodes_list, components = analysis.create_network_file(node_dict, alldata_df, MIN_STRENGTH, savepath)
 
         app.progress_bar["value"] = 20
         app.master.update()
