@@ -1,8 +1,9 @@
 import math
 
-from nltk import sent_tokenize, word_tokenize, PorterStemmer
-from nltk.corpus import stopwords
+from nltk import sent_tokenize, word_tokenize, PorterStemmer, pos_tag
+from nltk.corpus import stopwords, wordnet
 from nltk import RegexpTokenizer
+from nltk import WordNetLemmatizer
 
 TOKENIZER = RegexpTokenizer(r"\w+")
 
@@ -299,11 +300,36 @@ def create_extractive_summary(cluster, threshold):
 
     return summary
 
+def get_wordnet_pos(word) :
+    ''' Maps Parts_of_speech tag to first character that lemmatize() accepts
+
+        Parameters
+        ------------
+        word: str
+                The word to lemmatize
+
+        Returns
+        ------------
+        word_tag: wordnet POS object
+                The tag of the word, defaults to Noun if POS not found. 
+    '''
+    tag = pos_tag([word])
+    tag_first = tag[0][1][0].upper()
+    tag_dict = {"J": wordnet.ADJ,
+                "N": wordnet.NOUN,
+                "V": wordnet.VERB,
+                "R": wordnet.ADV}
+
+    word_tag = tag_dict.get(tag_first, wordnet.NOUN)
+
+    return word_tag
+
 def create_tf_table(df, *args):
     tf_table = {}
     list_of_words = []
     stop_words = set(stopwords.words("english"))
-    port_stemmer = PorterStemmer()
+    # port_stemmer = PorterStemmer()
+    lemmatizer = WordNetLemmatizer()
     for index, row in df.iterrows():
         for arg in args:
             words = TOKENIZER.tokenize(row[arg]) 
@@ -311,10 +337,11 @@ def create_tf_table(df, *args):
 
     for word in list_of_words:            #Get the frequency table
         word = word.lower()
-        word = port_stemmer.stem(word)    #stem each word to calculate a more acc freq
         if word in stop_words:
             continue
 
+        word = lemmatizer.lemmatize(word, get_wordnet_pos(word))    #lemmatize each word to calculate a more acc freq
+        
         if word in tf_table:
             tf_table[word] += 1
         else:
@@ -379,6 +406,6 @@ def create_cluster_names(clusters, df, num_words, *args):
         tf_idf_ordered_list = sorted(tf_idf_table.items(), key = lambda item:item[1])
         cluster_name = " ".join([tf_idf_ordered_list[x][0] for x in range(0, num_words)])
         cluster_names.append(cluster_name)
-        print(cluster_name)
+
 
     return cluster_names

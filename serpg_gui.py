@@ -191,7 +191,7 @@ class Application(tk.Frame):
         text.insert("end","Please select what you would like to do \n")
         return 0
     
-    def update_output_message(self, message):
+    def update_output_message(self, message, overwrite=True):
         ''' Updates the update window with a new message
 
         Parameters
@@ -205,8 +205,11 @@ class Application(tk.Frame):
 
         '''
         for text in self.updates_window.textbox:
-            text.delete("1.0", tk.END)
-            text.insert(tk.END, message)
+            if (overwrite):
+                text.delete("1.0", tk.END)
+                text.insert(tk.END, message)
+            else:
+                text.insert(tk.END, "\n" + message)
         return 0
 
     def create_mainframe_analysis(self, frame):
@@ -261,13 +264,20 @@ class Application(tk.Frame):
 
         max_year_label = tk.Label(
             frame, text="Please indicate \nlatest year eg. 2020", bg=MAINWINDOW_WHITE)
-        max_year_label.place(relx=0.5, rely=0.55, relwidth=0.2, relheight=0.1)
+        max_year_label.place(relx=0.4, rely=0.55, relwidth=0.2, relheight=0.1)
         max_year = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
         max_year.config(validate="key", validatecommand=(reg_valid_number, "%P"))
-        max_year.place(relx=0.5, rely=0.65, relwidth=0.2, relheight=0.05)
+        max_year.place(relx=0.4, rely=0.65, relwidth=0.2, relheight=0.05)
+
+        min_str_label = tk.Label(
+            frame, text="Please indicate min \nedge strength eg. 2", bg=MAINWINDOW_WHITE)
+        min_str_label.place(relx=0.7, rely=0.55, relwidth=0.2, relheight=0.1)
+        min_str = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
+        min_str.config(validate="key", validatecommand=(reg_valid_number, "%P"))
+        min_str.place(relx=0.7, rely=0.65, relwidth=0.2, relheight=0.05)
 
         start_analysis = self.start_analysis_button(frame, all_data_file, main_data_file,
-                                                    save_folder, min_year, max_year)
+                                                    save_folder, min_year, max_year, min_str)
         start_analysis.place(relx=0.1, rely=0.75, relwidth=0.6, relheight=0.1)
 
         return 0
@@ -380,7 +390,7 @@ class Application(tk.Frame):
                         command=lambda: self.retrieve_folder(frame, entry))
         return btn
 
-    def start_analysis_button(self, frame, alldata_path, mainpubs_path, save_path, min_year, max_year):
+    def start_analysis_button(self, frame, alldata_path, mainpubs_path, save_path, min_year, max_year, min_strength):
         '''Creates a button that will trigger the data analysis
 
         Parameters
@@ -410,7 +420,7 @@ class Application(tk.Frame):
         btn = btn = tk.Button(master=frame, text="Start Analysis",
                               command=lambda: self.analyse_data(alldata_path, mainpubs_path,
                                                                 save_path, min_year, 
-                                                                max_year))
+                                                                max_year, min_strength))
         return btn
 
     def retrieve_info_button(self, frame, savepath, topic, key, min_year, max_year, root_doc, cite_doc):
@@ -491,7 +501,7 @@ class Application(tk.Frame):
         entry.insert(tk.END, folder)
         return folder
 
-    def analyse_data(self, alldata_path, mainpubs_path, save_path, min_year, max_year):
+    def analyse_data(self, alldata_path, mainpubs_path, save_path, min_year, max_year, min_strength):
         ''' Function that will initiate the analysis of data. This function will execute
             input validation too.
 
@@ -512,6 +522,9 @@ class Application(tk.Frame):
             max_year : str
                     the latest year to limit the period of publication retrieval
 
+            min_strength : str
+                    the minimum coupling strength of publications
+
             Returns
             ----------
             None
@@ -524,6 +537,7 @@ class Application(tk.Frame):
         folder_path = save_path.get()
         minimum_year = min_year.get()
         maximum_year = max_year.get()
+        minimum_strength = min_strength.get()
         error_message = ""
         if (len(alldata_file) == 0) or not path.exists(alldata_file):
             alldata_path.config({'background': ERROR_COLOUR})
@@ -549,13 +563,18 @@ class Application(tk.Frame):
             max_year.config({'background': ERROR_COLOUR})
             error_message += "Latest Year cannot be empty. \n"
             all_valid = False  
+
+        if (len(minimum_strength) == 0):
+            max_year.config({'background': ERROR_COLOUR})
+            error_message += "Minimum Edge Strength cannot be empty. \n"
+            all_valid = False  
         
         if (all_valid):
-            all_entry = [alldata_path, mainpubs_path, save_path, min_year, max_year]
+            all_entry = [alldata_path, mainpubs_path, save_path, min_year, max_year, min_strength]
             for entry in all_entry:
                 entry.config({'background': SIDEBAR_LIGHTGREY})
             print("EXECUTING")
-            analysis_of_data(alldata_file, mainpubs_file, folder_path, minimum_year, maximum_year)
+            analysis_of_data(alldata_file, mainpubs_file, folder_path, minimum_year, maximum_year, minimum_strength)
             return "COMPLETED"
         else:
             self.update_output_message(error_message)
@@ -707,9 +726,10 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
 
     return 0
 
-def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
+def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year, min_strength):
     min_year = int(min_year)
     max_year = int(max_year)
+    min_strength = int(min_strength)
     app.update_output_message("Starting retrieval of data")
     app.master.update()
     try: 
@@ -729,8 +749,7 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
         app.update_output_message("Number of nodes: " + str(len(node_dict.keys())))
         app.progress_bar["value"] = 15
         app.master.update()
-        MIN_STRENGTH = 2; 
-        connected_nodes_list, components = analysis.create_network_file(node_dict, alldata_df, MIN_STRENGTH, savepath)
+        connected_nodes_list, components = analysis.create_network_file(node_dict, alldata_df, min_strength, savepath)
 
         app.progress_bar["value"] = 20
         app.master.update()
@@ -744,14 +763,13 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year):
             cluster_no = x + 1
             cluster_name = cluster_names[x]
             
-            app.update_output_message("Analysing Component " + str(cluster_no) + ": " + cluster_name)
+            app.update_output_message("Analysing Component " + str(cluster_no) + ": " + cluster_name, overwrite=False)
             app.progress_bar["value"] += (70/len(components))
             app.master.update()
 
             
             cluster_df, linegraph_data = analysis.create_cluster_indi_2(cluster, cluster_no, cluster_name,
-                                                                        alldata_df, min_year, max_year, 
-                                                                        lda_model, dictionary, savepath)
+                                                                        alldata_df, min_year, max_year, savepath)
             clusters[cluster_name] = cluster_df
             linegraph_data_dict[cluster_name] = linegraph_data
 

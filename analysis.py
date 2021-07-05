@@ -7,6 +7,7 @@ from networkx.algorithms import community
 from networkx.algorithms import centrality
 from networkx.algorithms import components
 
+
 from lib.node_serpapi import Node
 import lib.graphcreator as graphcreator
 import lib.metrics as metrics
@@ -94,7 +95,8 @@ def create_network_file(node_dict, alldata_df, min_strength, savepath):
 
     connected_nodes = []
     node_in_network = set()
-    counter = 1;
+    counter = 1
+    network_graph = nx.Graph()
     for node in node_dict.values():
         bib_couple_dict = node.edge_dict
         pub_title = node.title
@@ -109,25 +111,62 @@ def create_network_file(node_dict, alldata_df, min_strength, savepath):
                 continue
             else:
                 connected_nodes.append([pub_title, couple_pub_title, couple_edge_weight, pub_topic_no, pub_topic])
+                network_graph.add_edge(pub_title, couple_pub_title, weight=couple_edge_weight)
                 added_to_graph = True
         if not added_to_graph:
-            connected_nodes.append([pub_title, pub_title, 0, -1, "No Topic Assigned"])  #Putting the node into the network to make sure it is not excluded. 
+            network_graph.add_node(pub_title)
+            connected_nodes.append([pub_title])
 
+    graphpath = savepath + "/networkgraph.graphml"
+    nx.write_graphml_lxml(network_graph, graphpath)
+
+    print(alldata_df.iloc[0]["Year"])
+    print(alldata_df[["Year"]].head(1))
     col = ['Publication_1', 'Publication_2', 'Weight', 'Topic Number', 'Topic']
     network_df = pd.DataFrame(data=connected_nodes, columns=col)
-    network_graph = _create_graph(connected_nodes) #create graph to apply clustering algo
-    components = _create_clusters(network_graph)   # apply clustering algo
+    components = _create_clusters(network_graph)
+    clusters = []
     temp_df_list = []
+    recent_outlier = []
+    outlier = []
+    cluster_counter = 1
     for x in range(0, len(components)):
-        cluster_id = x + 1
         cluster = components[x]
-        temp_df = network_df[network_df["Publication_1"].isin(cluster)]  #add cluster number to nodes
-        temp_df.insert(len(temp_df.columns), "Cluster", cluster_id)
-        temp_df_list.append(temp_df)
+        if (len(cluster) <= 1):
+            temp_df = alldata_df[alldata_df["Title"].isin(cluster)]  #add cluster number to nodes
+            if is_recent_outlier(temp_df.iloc[0]["Year"], alldata_df["Year"].max()) :
+                recent_outlier.append(temp_df)
+            else:
+                outlier.append(temp_df)
+            network_df_entry = temp_df[["Title"]].rename(columns = {"Title": "Publication_1"}, inplace=False)
+            temp_df_list.append(network_df_entry)
+            continue
+        else:
+            temp_df = network_df[network_df["Publication_1"].isin(cluster)]  #add cluster number to nodes
+            temp_df.insert(len(temp_df.columns), "Cluster", cluster_counter)
+            temp_df_list.append(temp_df)
+            clusters.append(cluster)
+            cluster_counter += 1
+
+
+    network_path = savepath + "/network.xlsx"
+    recent_outlier_path = savepath + "/recently emerging outliers.xlsx"
+    outlier_path = savepath + "/outliers.xlsx"
     network_df = pd.concat(temp_df_list)
-    path = savepath + "/network.xlsx"
-    network_df.to_excel(path, index=False)
-    return connected_nodes, components
+    network_df.to_excel(network_path, index=False)
+    recent_outlier_df = pd.concat(recent_outlier)
+    recent_outlier_df.to_excel(recent_outlier_path, index=False)
+    outlier_df = pd.concat(outlier)
+    outlier_df.to_excel(outlier_path, index=False)
+
+    return connected_nodes, clusters
+
+
+def is_recent_outlier(year, max_year):
+    if (max_year - year < 3):
+        return True
+    else:
+        return False
 
 
 def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, lda_model, dictionary):
@@ -203,7 +242,7 @@ def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, l
     
     return clusters, linegraph_data_dict
 
-def create_cluster_indi_2(cluster, cluster_no, cluster_name, alldata_df, min_year, max_year, lda_model, dictionary, savepath):
+def create_cluster_indi_2(cluster, cluster_no, cluster_name, alldata_df, min_year, max_year, savepath):
     ''' Analyses entries of one cluster in the publications DataFrame and groups the entries into
         a dataframe. Creates wordcloud and linegraph for this cluster.
         To be used together with GUI for GUI to track each cluster iteration for UX feature 
@@ -236,6 +275,9 @@ def create_cluster_indi_2(cluster, cluster_no, cluster_name, alldata_df, min_yea
         dictionary : dict
                 Dictionary of words and occurrence frequency
                 key, value = word, frequency
+
+        savepath: str
+                the path to the folder to save this cluster
 
         Returns
         ----------
@@ -380,7 +422,7 @@ def _create_graph(node_list):
     return graph
 
 def _create_clusters(graph):
-    ''' Creates clusters based on the girvan newman clustering algorthim
+    ''' Creates clusters based on the girvan newman clustering algorthim with modularity
 
         Parameters
         -----------
@@ -389,12 +431,25 @@ def _create_clusters(graph):
 
         Returns
         -----------
-        components: clusters derived from the algorithm
+        clusters: list of tuples
+                the clusters derived from girvan_newman algorithm
     '''
 
     # components = girvan_with_modularity(graph)
-    components = community.greedy_modularity_communities(graph)
-    return components
+    latest_mod = float(0)
+    highest_mod = float(0)
+    components = community.girvan_newman(graph)
+    clusters = None
+    while round(latest_mod,2) >= round(highest_mod,2):
+        print(highest_mod)
+        print(latest_mod)
+        highest_mod = latest_mod
+        clusters = next(components)
+        latest_mod = community.modularity(graph, clusters)
+
+    print(highest_mod)
+    print(len(clusters))
+    return clusters
 
 
 def main():
