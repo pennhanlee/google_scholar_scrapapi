@@ -565,7 +565,7 @@ class Application(tk.Frame):
             all_valid = False  
 
         if (len(minimum_strength) == 0):
-            max_year.config({'background': ERROR_COLOUR})
+            min_strength.config({'background': ERROR_COLOUR})
             error_message += "Minimum Edge Strength cannot be empty. \n"
             all_valid = False  
         
@@ -730,6 +730,7 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year, 
     min_year = int(min_year)
     max_year = int(max_year)
     min_strength = int(min_strength)
+    print(min_strength)
     app.update_output_message("Starting retrieval of data")
     app.master.update()
     try: 
@@ -763,7 +764,7 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year, 
             cluster_no = x + 1
             cluster_name = cluster_names[x]
             
-            app.update_output_message("Analysing Component " + str(cluster_no) + ": " + cluster_name, overwrite=False)
+            app.update_output_message("Analysing Component " + str(cluster_no) + ": " + cluster_name)
             app.progress_bar["value"] += (70/len(components))
             app.master.update()
 

@@ -124,7 +124,7 @@ def create_network_file(node_dict, alldata_df, min_strength, savepath):
     print(alldata_df[["Year"]].head(1))
     col = ['Publication_1', 'Publication_2', 'Weight', 'Topic Number', 'Topic']
     network_df = pd.DataFrame(data=connected_nodes, columns=col)
-    components = _create_clusters(network_graph)
+    components = _create_clusters_greedynewman(network_graph)
     clusters = []
     temp_df_list = []
     recent_outlier = []
@@ -154,9 +154,9 @@ def create_network_file(node_dict, alldata_df, min_strength, savepath):
     outlier_path = savepath + "/outliers.xlsx"
     network_df = pd.concat(temp_df_list)
     network_df.to_excel(network_path, index=False)
-    recent_outlier_df = pd.concat(recent_outlier)
-    recent_outlier_df.to_excel(recent_outlier_path, index=False)
-    outlier_df = pd.concat(outlier)
+    recent_outlier_df = pd.concat(recent_outlier) if len(recent_outlier) else pd.DataFrame()
+    recent_outlier_df.to_excel(recent_outlier_path, index=False) 
+    outlier_df = pd.concat(outlier) if len(outlier) else pd.DataFrame()
     outlier_df.to_excel(outlier_path, index=False)
 
     return connected_nodes, clusters
@@ -421,7 +421,7 @@ def _create_graph(node_list):
         graph.add_edge(node[0], node[1], weight=node[2])
     return graph
 
-def _create_clusters(graph):
+def _create_clusters_girvannewman(graph):
     ''' Creates clusters based on the girvan newman clustering algorthim with modularity
 
         Parameters
@@ -450,6 +450,10 @@ def _create_clusters(graph):
     print(highest_mod)
     print(len(clusters))
     return clusters
+
+def _create_clusters_greedynewman(graph):
+    components = community.greedy_modularity_communities(graph)
+    return components
 
 
 def main():
