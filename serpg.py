@@ -79,16 +79,17 @@ def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_li
         result_list = results["organic_results"]
         for entry in result_list:
             title = entry["title"]
-            year = extract_year(entry["publication_info"]["summary"])
+            year, authors, authors_id = extract_year_and_authors(entry["publication_info"])
             snippet = entry["snippet"] if "snippet" in entry else "Empty"
+            hyperlink = entry["link"] if "link" in entry else "Unavaliable"
             cites_id = entry["inline_links"].get("cited_by").get("cites_id") if "cited_by" in entry["inline_links"] else "Empty"
             total_cites = entry["inline_links"].get("cited_by").get("total") if "cited_by" in entry["inline_links"] else 0
             result_id = entry["result_id"]
 
             node_data, citing_result_id = retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key)
 
-            alldata_df_entry = [title, year, snippet, cites_id, total_cites, result_id]
-            main_df_entry = [title, year, snippet, cites_id, total_cites, result_id, "Main_Pub", citing_result_id]
+            alldata_df_entry = [title, year, snippet, authors, authors_id, hyperlink, cites_id, total_cites, result_id]
+            main_df_entry = [title, year, snippet, authors, authors_id, hyperlink, cites_id, total_cites, result_id, citing_result_id]
 
             alldata_dict[result_id] = alldata_df_entry
             alldata_dict.update(node_data)
@@ -140,9 +141,9 @@ def retrieve_docs(topic, min_year, max_year, limit, citation_limit, key):
     '''
 
     total_retrieved = 0
-    alldata_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id']
+    alldata_col = ['Title', 'Year', 'Abstract', 'Authors', 'Authors_id', 'Hyperlink', 'Citedby_id', 'No_of_citations', 'Result_id']
     alldata_df = pd.DataFrame(columns=alldata_col)
-    main_data_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id', 'Type_of_Pub', 'Citing_pubs_id']
+    main_data_col = ['Title', 'Year', 'Abstract', 'Authors', 'Authors_id', 'Hyperlink', 'Citedby_id', 'No_of_citations', 'Result_id', 'Citing_pubs_id']
     main_data_df = pd.DataFrame(columns=main_data_col)
     while (total_retrieved < limit):
         remainder = limit - total_retrieved
@@ -166,6 +167,8 @@ def retrieve_docs(topic, min_year, max_year, limit, citation_limit, key):
                 year = extract_year(entry["publication_info"]["summary"])
                 snippet = entry["snippet"] if "snippet" in entry else "Empty"
                 cites_id = entry["inline_links"].get("cited_by").get("cites_id") if "cited_by" in entry["inline_links"] else "Empty"
+                year, authors, authors_id = extract_year_and_authors(entry["publication_info"]["authors"])
+                hyperlink = entry["link"]
                 total_cites = entry["inline_links"].get("cited_by").get("total") if "cited_by" in entry["inline_links"] else 0
                 result_id = entry["result_id"]
 
@@ -249,14 +252,15 @@ def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
             # result_list += results["organic_results"]
             for doc in results['organic_results']:
                 title = doc["title"]
-                year = extract_year(doc["publication_info"]["summary"])
                 snippet = doc["snippet"] if "snippet" in doc else "Empty"
                 cite_id = doc["inline_links"].get("cited_by").get("cites_id") if "cited_by" in doc["inline_links"] else "Empty"
-                total_cited = doc["inline_links"].get("cited_by").get("total") if "cited_by" in doc["inline_links"] else 0
+                year, authors, authors_id = extract_year_and_authors(doc["publication_info"])
+                hyperlink = doc["link"] if "link" in doc else "Unavaliable"
+                total_cites = doc["inline_links"].get("cited_by").get("total") if "cited_by" in doc["inline_links"] else 0
                 result_id = doc["result_id"]
 
-                node = Node(title, year, snippet, cite_id, total_cited, result_id)    #Still thinking what the node class is for
-                node_in_list_form = [title, year, snippet, cite_id, total_cited, result_id]  #Easier to just use the list
+                node = Node(title, year, snippet, cite_id, total_cites, result_id)    #Still thinking what the node class is for
+                node_in_list_form = [title, year, snippet, authors, authors_id, hyperlink, cites_id, total_cites, result_id]  #Easier to just use the list
                 node_data[result_id] = node_in_list_form
                 result_id_list.append(result_id)
             total_retrieved += len(results["organic_results"])
@@ -283,6 +287,44 @@ def extract_year(string):
         return int(match.group())
     else:
         return 0
+
+def extract_year_and_authors(publication_info):
+    ''' extracts the authors and their ids from a list of dictionaries retrieved from google scholar
+
+        Parameters
+        ------------
+        publication_info: dict
+                        A dictionary of "Year" : string and "Authors" : list
+
+        Returms
+        ------------
+        year: int
+                The year of publication
+        authors : str
+                names of authors separated by ;
+        authors_id : str
+                id of authors separated by ;
+    '''
+    year = 0
+    authors = "Unavaliable"
+    authors_id = "Unavaliable"
+
+    year_string = publication_info["summary"]
+    match = re.search(r'\b(19|20)\d{2}(?=[ ])(?![^ ])\b', year_string)
+    if match:
+        year = int(match.group())
+
+    if "authors" in publication_info:
+        author_name_list = []
+        author_id_list = []
+        for author in publication_info["authors"]:
+            author_name_list.append(author["name"])
+            author_id_list.append(author["author_id"])
+        authors = ";".join(author_name_list)
+        authors_id = ";".join(author_id_list)
+        
+
+    return year, authors, authors_id
 
 
 def add_to_df(df, pub_dict):

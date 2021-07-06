@@ -682,9 +682,9 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
     app.update_output_message("Starting retrieval of data")
     app.master.update()
     try:
-        alldata_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id']
+        alldata_col = ['Title', 'Year', 'Abstract', 'Authors', 'Authors_id', 'Hyperlink', 'Citedby_id', 'No_of_citations', 'Result_id']
         alldata_df = pd.DataFrame(columns=alldata_col)
-        main_data_col = ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id', 'Type_of_Pub', 'Citing_pubs_id']
+        main_data_col = ['Title', 'Year', 'Abstract', 'Authors', 'Authors_id', 'Hyperlink', 'Citedby_id', 'No_of_citations', 'Result_id', 'Citing_pubs_id']
         main_data_df = pd.DataFrame(columns=main_data_col)
 
         app.progress_bar["value"] = 10
@@ -720,6 +720,7 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
         app.master.update()
 
     except Exception as err:
+        raise Exception
         app.update_output_message("{}".format(err).upper())
         app.progress_bar["value"] = 0
         app.master.update()
