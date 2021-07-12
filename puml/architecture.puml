@@ -1,0 +1,35 @@
+@startuml
+
+!include <office/Concepts/globe_internet>
+!include <office/Concepts/documents>
+!include <office/Users/user>
+!include style.puml
+
+Class Excel STORAGE_COLOR
+
+Package " "<<Rectangle>>{
+    Class UI UI_COLOR
+    Class DataRetrieval LOGIC_COLOR_T2
+    Class DataAnalysis LOGIC_COLOR_T2
+    Class NLP MODEL_COLOR
+    Class Network MODEL_COLOR
+    Class Clustering MODEL_COLOR
+    Class Metrics MODEL_COLOR
+    
+}
+
+Class "<$user>" as User MODEL_COLOR_T2
+Class "<$documents>" as Excel UI_COLOR_T1
+
+User ..> UI
+UI -down[#green]-> DataAnalysis
+UI -down[#green]-> DataRetrieval
+DataRetrieval .right[STORAGE_COLOR].>Excel
+Excel .left[STORAGE_COLOR].> DataAnalysis
+DataAnalysis -down[#red]-> NLP
+DataAnalysis -down[#red]-> Network
+DataAnalysis -down[#red]-> Metrics
+DataAnalysis -down[#red]-> Clustering
+
+
+@enduml

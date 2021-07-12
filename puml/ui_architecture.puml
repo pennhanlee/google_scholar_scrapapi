@@ -1,0 +1,28 @@
+@startuml
+
+!include style.puml
+
+package UI <<Rectangle>>{
+    class Application UI_COLOR
+    class MainWindow UI_COLOR
+    class SideBar UI_COLOR
+    class UpdateBox UI_COLOR
+    class ProgressBar UI_COLOR
+}
+
+class HiddenOutside #FFFFFF
+class DataRetrieval LOGIC_COLOR
+class DataAnalysis LOGIC_COLOR
+
+HiddenOutside ..> Application
+Application *-down-> MainWindow
+Application *-down-> SideBar
+Application *-down-> UpdateBox
+Application *-down-> ProgressBar
+MainWindow -right-> UpdateBox
+MainWindow -right-> ProgressBar
+SideBar -right-> MainWindow
+DataRetrieval -up-> MainWindow
+DataAnalysis -up-> MainWindow
+
+@enduml

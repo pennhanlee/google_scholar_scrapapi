@@ -1,0 +1,28 @@
+@startuml
+
+!include style.puml
+
+package "Data Analysis" <<Rectangle>>{
+    class DataAnalysis LOGIC_COLOR
+    class PublicationNode LOGIC_COLOR
+    class Network LOGIC_COLOR
+    class Clustering LOGIC_COLOR
+}
+
+class HiddenOutside #FFFFFF
+class Networkx_Graph #grey
+class Excel STORAGE_COLOR
+class Metric MODEL_COLOR
+class NLP MODEL_COLOR
+
+HiddenOutside ..> DataAnalysis
+DataAnalysis *-down-> Clustering
+DataAnalysis *-down-> PublicationNode
+DataAnalysis *-down-> Network
+PublicationNode -right-> Network
+Network -down-> Networkx_Graph
+Clustering -down-> NLP
+Clustering -down-> Metric
+Clustering -right-> Excel
+
+@enduml

@@ -1,0 +1,22 @@
+@startuml
+
+!include style.puml
+
+package UI <<Rectangle>>{
+    class DataRetrieval LOGIC_COLOR
+    class API_Call LOGIC_COLOR
+    class Prepare_Excel LOGIC_COLOR
+}
+
+class HiddenOutside #FFFFFF
+class SERPApi #grey
+class Excel STORAGE_COLOR
+
+HiddenOutside ..> DataRetrieval
+DataRetrieval -down-> API_Call
+API_Call -down-> SERPApi
+DataRetrieval -down-> Prepare_Excel
+Prepare_Excel -right-> Excel
+SERPApi -up-> DataRetrieval
+
+@enduml

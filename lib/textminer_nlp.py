@@ -349,7 +349,7 @@ def create_tf_table(df, *args):
 
     num_of_words_in_cluster = sum(tf_table.values())   
     for key, value in tf_table.items():          #convert to term frequency
-        tf_table[key] = (value / num_of_words_in_cluster)
+        tf_table[key] = (float(value) / num_of_words_in_cluster)
 
     return tf_table
 
