@@ -1,0 +1,17 @@
+@startuml
+
+start
+:Tokeniser all words in all publications;
+:Prepare gensim bag-of-words dictionary;
+:Pass bow dictionary into LDAmodel;
+:Prepare topics based on Specified number of topics;
+while() is ([For all publications])
+    :Pass publication into LDAModel;
+    :Update publication with assigned topic and probablity;
+endwhile([else])
+
+:Save updated publications in dataframe;
+
+stop
+
+@enduml

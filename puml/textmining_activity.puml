@@ -1,0 +1,26 @@
+@startuml
+
+start
+
+:Get clusters and dataframe from Data Analysis;
+
+while() is ([For all clusters])
+    :Get publications in cluster from dataframe;
+    :Create TF Table;
+
+endwhile ([else])
+
+:Pass all TF Tables into IDF table function;
+:Create IDF table;
+
+
+while() is ([For all TF-Tables])
+    :Calculate TF-IDF value for all words in table;
+    :Sort by TF-IDF value;
+    :Retrieve top X words as cluster name;
+endwhile ([else])
+
+:Return names to Data Analysis;
+
+stop
+@enduml

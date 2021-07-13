@@ -1,0 +1,60 @@
+@startuml
+!include style.puml
+
+box DataAnalysis LOGIC_COLOR_T1
+participant ":Analyse" as da LOGIC_COLOR
+participant ":Create_Network" as cn LOGIC_COLOR
+participant ":Analyse_Cluster" as ac LOGIC_COLOR
+end box
+
+box Metrics MODEL_COLOR_T1
+participant ":NLP" as nlp MODEL_COLOR
+participant ":Cluster_Metrics" as cm MODEL_COLOR
+end box
+
+box Excel STORAGE_COLOR_T1
+participant ":Excel" as excel STORAGE_COLOR
+end box
+
+[-> da : analyse("./alldata.xlsx", \n"./mainpubs.xlsx", \n2010, 2020, \n20, 50, 1)]
+activate da LOGIC_COLOR
+
+da -[LOGIC_COLOR]> excel : "retrieve ./alldata.xlsx \n mainpubs.xlsx"
+activate excel STORAGE_COLOR
+excel --[STORAGE_COLOR]> da
+deactivate excel
+
+da -[LOGIC_COLOR]> da : "create_nodes()"
+da -[LOGIC_COLOR]> nlp : "topic modelling"
+activate nlp MODEL_COLOR
+nlp --[MODEL_COLOR]> da
+deactivate nlp
+
+create cn
+da -[LOGIC_COLOR]> cn
+activate cn LOGIC_COLOR
+cn --[LOGIC_COLOR]> da
+deactivate cn
+
+da -[LOGIC_COLOR]> nlp : "text mining \n cluster name"
+activate nlp MODEL_COLOR
+nlp --[MODEL_COLOR]> da
+deactivate nlp
+
+create ac
+da -[LOGIC_COLOR]> ac : "analyse cluster"
+activate ac LOGIC_COLOR
+ac -[LOGIC_COLOR]> cm : "calculate metrics \n create linegraph"
+activate cm MODEL_COLOR
+cm --[MODEL_COLOR]> ac
+deactivate cm
+ac --[LOGIC_COLOR]> da
+deactivate ac
+
+da -[LOGIC_COLOR]> excel : "save clusters"
+activate excel STORAGE_COLOR
+excel --[STORAGE_COLOR]> da
+deactivate excel
+
+
+@enduml

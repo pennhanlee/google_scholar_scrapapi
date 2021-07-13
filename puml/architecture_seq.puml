@@ -1,0 +1,41 @@
+@startuml
+!include style.puml
+
+Actor User as user USER_COLOR
+Participant ":UI" as ui UI_COLOR
+Participant ":Data Analysis" as da LOGIC_COLOR
+Participant ":CLUSTER/NLP" as nt MODEL_COLOR
+Participant ":Excel" as excel STORAGE_COLOR
+
+user -[USER_COLOR]> ui : "start analysis\n("./alldata.xlsx", \n "./mainpub.xlsx", \n 2010, 2020, \n 20, 20)
+activate ui UI_COLOR
+
+ui -[UI_COLOR]> da : "analyse\n("./alldata.xlsx", \n "./mainpub.xlsx", \n 2010, 2020, \n 20, 20)"
+activate da LOGIC_COLOR
+
+da -[LOGIC_COLOR]> excel : "./alldata.xlsx & ./mainpubs.xlsx"
+activate excel STORAGE_COLOR
+excel --[STORAGE_COLOR]> da
+deactivate excel
+
+da -[LOGIC_COLOR]> nt : "perform NLP"
+activate nt MODEL_COLOR
+nt --[MODEL_COLOR]> da
+deactivate nt
+
+da -[LOGIC_COLOR]> da : "create Network"
+
+da -[LOGIC_COLOR]> nt : "create Clusters"
+activate nt MODEL_COLOR
+nt --[MODEL_COLOR]> da
+deactivate nt
+
+da -[LOGIC_COLOR]> excel : "store files"
+activate excel STORAGE_COLOR
+excel --[STORAGE_COLOR]> da
+deactivate excel
+
+da --[LOGIC_COLOR]> ui
+deactivate da
+
+@enduml

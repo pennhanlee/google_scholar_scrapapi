@@ -1,0 +1,21 @@
+@startuml
+start
+:User initiates program;
+
+if() then ([Retrieve Data])
+:Render data retrieval widgets;
+
+else ([Start Analysis])
+:Render data analysis widgets;
+
+endif
+:User input commands;
+    while() is ([Input Error])
+        :Wrong inputs highlighted in red;
+    endwhile ([else])
+
+:process start;
+:Updatebox and Progressbar updates;
+stop
+
+@enduml

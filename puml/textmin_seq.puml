@@ -1,0 +1,36 @@
+@startuml
+!include style.puml
+
+box TextMining MODEL_COLOR_T1
+participant ":Textminer_NLP" as tm MODEL_COLOR
+end box
+
+box TopicModel MODEL_COLOR_T1
+participant ":Topic_Model" as tp MODEL_COLOR
+end box
+
+[-> tm : create_cluster_names(clusters, df, num_words, *args)
+activate tm MODEL_COLOR
+tm -[MODEL_COLOR]> tm : tokenize
+loop for x in clusters
+    tm -[MODEL_COLOR]> tm : create_tftable
+end
+tm -[MODEL_COLOR]> tm : create_idftable_corpus
+loop for x in clusters
+    tm -[MODEL_COLOR]> tm : create_tfidf_table
+end
+tm -[MODEL_COLOR]> tm : select cluster names
+[<-- tm
+deactivate tm
+
+[-> tp : create_LDA_model()
+activate tp MODEL_COLOR
+tp -[MODEL_COLOR]> tp : tokenize
+tp -[MODEL_COLOR]> tp : prepare_topics
+loop for x in publications
+    tp -[MODEL_COLOR]> tp : retrieve_topic_for_doc
+end
+[<-- tp
+deactivate tp
+
+@enduml

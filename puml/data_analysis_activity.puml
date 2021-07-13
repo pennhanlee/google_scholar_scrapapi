@@ -1,0 +1,19 @@
+@startuml
+
+start
+:User start analysis;
+
+:Retrieve alldata.xlsx & mainpubs.xlsx;
+
+:Create nodes;
+
+:Create network graph;
+
+:Cluster nodes and assign cluster names;
+
+:Analyse cluster metrics;
+
+:Save clusters in excel;
+
+stop
+@enduml

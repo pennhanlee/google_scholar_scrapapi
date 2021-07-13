@@ -1,0 +1,52 @@
+@startuml
+!include style.puml
+
+box DataRetrieval LOGIC_COLOR_T1
+participant ":Retrieve_Doc" as rd LOGIC_COLOR
+participant ":Retrieve_Citing_Doc" as rcd LOGIC_COLOR
+end box
+
+box SERPAPI #LightGrey
+participant ":SERPAPI" as serpapi #Grey
+end box
+
+box Excel STORAGE_COLOR_T1
+participant ":Excel" as excel STORAGE_COLOR
+end box
+
+[-> rd : retrieve_doc("machine learning", \n"api_key", \n2010, 2020, \n20, 50 \n "./folder")]
+activate rd LOGIC_COLOR
+
+loop for x in range(0, no_of_root_pubs)
+    rd -[LOGIC_COLOR]> serpapi
+    activate serpapi #Grey
+    serpapi -[#Grey]> serpapi : "scrap google scholar"
+    serpapi --[#Grey]> rd
+    deactivate serpapi
+
+    loop for x in range(0, no_of_citing_pubs)
+        create rcd LOGIC_COLOR
+        rd -[LOGIC_COLOR]> rcd : "retrieve_citing_doc"
+        activate rcd LOGIC_COLOR
+        rcd -[LOGIC_COLOR]> serpapi
+        activate serpapi #Grey
+        serpapi -[#Grey]> serpapi : "scrap google scholar"
+        serpapi --[#Grey]> rcd
+        deactivate serpapi #Grey
+        rcd --[LOGIC_COLOR]> rd
+        deactivate rcd
+    end
+end
+
+rd -[LOGIC_COLOR]> excel : "save alldata.xlsx & maindata.xlsx"
+activate excel STORAGE_COLOR
+excel --[STORAGE_COLOR]> rd
+deactivate excel
+
+[<--rd
+deactivate rd
+
+
+
+
+@enduml

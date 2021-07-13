@@ -27,7 +27,6 @@ UI -down[#green]-> DataRetrieval
 DataRetrieval .right[STORAGE_COLOR].>Excel
 Excel .left[STORAGE_COLOR].> DataAnalysis
 DataAnalysis -down[#red]-> NLP
-DataAnalysis -down[#red]-> Network
 DataAnalysis -down[#red]-> Metrics
 DataAnalysis -down[#red]-> Clustering
 

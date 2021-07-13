@@ -1,0 +1,23 @@
+@startuml
+
+start
+:User start retrieval process;
+while() is ([For number of root pubs])
+    :Retrieve root publications;
+    :Get root publication ID;
+    
+    while() is ([For number of citing pubs])
+    :Retrieve citing publication;
+    endwhile ([else])
+
+endwhile ([else])
+
+:Prepare publications;
+
+:Save mainpubs.xlsx;
+
+:Save alldata.xlsx;
+
+stop
+
+@enduml
