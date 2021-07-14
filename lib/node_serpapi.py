@@ -22,16 +22,22 @@ class Node:
         to_string()
     '''
 
-    def __init__(self, title, year, abstract, cite_id, cite_count, result_id, topic_no=None, topic=None, topic_prob=None):
+    def __init__(self, title, year, abstract, authors, author_id, hyperlink, cite_id, cite_count, result_id, pub_type, citing_pub_id="", topic_no=None, topic=None, topic_prob=None):
         self.title = title
         self.year = year
         self.abstract = abstract
+        self.authors = authors
+        self.author_id = author_id
+        self.hyperlink = hyperlink
         self.cite_id = cite_id
         self.cite_count = cite_count
         self.result_id = result_id
+        self.type = pub_type
+        self.citing_pub_id = citing_pub_id
         self.topic_no = topic_no
         self.topic = topic
         self.topic_prob = topic_prob
+        
         self.edge_dict = {}
 
     def add_edge(self, result_id):

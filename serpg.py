@@ -20,7 +20,7 @@ CURRENT_TIME_STRING = datetime.now().strftime("%d-%m-%Y_%H%M")
 def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_limit, offset):
     ''' Retrieves publications of a topic in Google Scholar through the SERPAPI
     as well as the publications that cite this publication for 1 iteration.
-    To be used together with GUI for GUI to track each iteration for UX feature 
+    To be used together with GUI for GUI to track each iteration for UX feature
 
     Parameters
     ----------------
@@ -74,7 +74,7 @@ def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_li
     search = GoogleSearch(params)
     results = search.get_dict()
     alldata_dict = {}
-    maindata_dict = {}
+    rootpub_counter = 0
     if ("organic_results" in results):
         result_list = results["organic_results"]
         for entry in result_list:
@@ -82,20 +82,20 @@ def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_li
             year, authors, authors_id = extract_year_and_authors(entry["publication_info"])
             snippet = entry["snippet"] if "snippet" in entry else "Empty"
             hyperlink = entry["link"] if "link" in entry else "Unavaliable"
-            cites_id = entry["inline_links"].get("cited_by").get("cites_id") if "cited_by" in entry["inline_links"] else "Empty"
+            cite_id = entry["inline_links"].get("cited_by").get("cites_id") if "cited_by" in entry["inline_links"] else "Empty"
             total_cites = entry["inline_links"].get("cited_by").get("total") if "cited_by" in entry["inline_links"] else 0
             result_id = entry["result_id"]
 
-            node_data, citing_result_id = retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key)
-
-            alldata_df_entry = [title, year, snippet, authors, authors_id, hyperlink, cites_id, total_cites, result_id]
-            main_df_entry = [title, year, snippet, authors, authors_id, hyperlink, cites_id, total_cites, result_id, citing_result_id]
+            node_data, citing_result_id = retrieve_citing_pub(cite_id, min_year, max_year, citation_limit, key)
+            alldata_df_entry = Node(title, year, snippet, authors, authors_id, hyperlink, cite_id, total_cites, result_id, "Root Publication", citing_result_id)
 
             alldata_dict[result_id] = alldata_df_entry
-            alldata_dict.update(node_data)
-            maindata_dict[result_id] = main_df_entry
+            if result_id in node_data:
+                node_data.pop(result_id)
+            alldata_dict.update(node_data)  #Need to make sure it doesnt update the Root Publications
+        rootpub_counter = len(result_list)
             
-    return alldata_dict, maindata_dict
+    return alldata_dict, rootpub_counter
 
     
 
@@ -258,10 +258,9 @@ def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
                 hyperlink = doc["link"] if "link" in doc else "Unavaliable"
                 total_cites = doc["inline_links"].get("cited_by").get("total") if "cited_by" in doc["inline_links"] else 0
                 result_id = doc["result_id"]
-
-                node = Node(title, year, snippet, cite_id, total_cites, result_id)    #Still thinking what the node class is for
-                node_in_list_form = [title, year, snippet, authors, authors_id, hyperlink, cites_id, total_cites, result_id]  #Easier to just use the list
-                node_data[result_id] = node_in_list_form
+                node = Node(title, year, snippet, authors, authors_id, hyperlink, cite_id, total_cites, result_id, "Citing Publication")
+                # node_in_list_form = [title, year, snippet, authors, authors_id, hyperlink, cites_id, total_cites, result_id, "Citing Publication", ""]
+                node_data[result_id] = node
                 result_id_list.append(result_id)
             total_retrieved += len(results["organic_results"])
         else:
@@ -343,10 +342,19 @@ def add_to_df(df, pub_dict):
     pandas Dataframe : Updated pandas Dataframe containing the dictonary
     '''
 
-    for pub_id in pub_dict.keys():
+    for pub_id, pub in pub_dict.items():
+        publication = [pub.title, pub.year, pub.abstract, pub.authors, 
+                        pub.author_id, pub.hyperlink, pub.cite_id, 
+                        pub.cite_count, pub.result_id, pub.type , pub.citing_pub_id]
         if (df.loc[(df['Result_id'] == pub_id)].empty):  # avoiding duplicates
-            df_entry = pub_dict[pub_id]
+            df_entry = publication
             df.loc[len(df.index)] = df_entry
+        else:
+            pub_in_df = df.loc[(df["Result_id"] == pub_id)][0]
+            if (pub_in_df["Type of Pub"] == "Citing Publication" and pub.type == "Root Publication"):
+                pub_in_df["Type of Pub"] = "Root Publication"
+                pub_in_df["Citing_pubs_id"] = pub.citing_pub_id
+                
     return df
 
 

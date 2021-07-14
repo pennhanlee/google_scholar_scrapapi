@@ -46,22 +46,30 @@ def create_nodes(alldata_df, mainpubs_df):
     '''
 
     full_node_dict = {}
-    for index, row in mainpubs_df.iterrows():
-        citing_pubs_id_list = row["Citing_pubs_id"].split(";")
+    rootpub_df = alldata_df[alldata_df["Type of Pub"] == "Root Publication"]
+    for index, row in rootpub_df.iterrows():
+        rootpub = row
+        rootpub_node = Node(rootpub["Title"], rootpub["Year"], rootpub["Abstract"], rootpub['Citedby_id'],
+                            rootpub["No_of_citations"], rootpub["Result_id"], rootpub["Type of Pub"], rootpub['Topic Number'], 
+                            rootpub['Topic'], rootpub['Topic Probability'])
+        citing_pubs_id_list = rootpub["Citing_pubs_id"].split(";")
         for result_id in citing_pubs_id_list:
             node = None
             if result_id not in full_node_dict:
                 entry = alldata_df.loc[alldata_df['Result_id'] == result_id]
                 entry = entry.iloc[0]
                 node = Node(entry["Title"], entry["Year"], entry["Abstract"], entry['Citedby_id'],
-                            entry["No_of_citations"], entry["Result_id"], entry['Topic Number'], 
+                            entry["No_of_citations"], entry["Result_id"], entry["Type of Pub"], entry['Topic Number'], 
                             entry['Topic'], entry['Topic Probability'])
                 full_node_dict[node.result_id] = node
             else:
                 node = full_node_dict[result_id]
-            for result_id in citing_pubs_id_list:
-                if result_id != node.result_id:
-                    node.add_edge(result_id)
+            for bibcouple_id in citing_pubs_id_list:
+                if bibcouple_id != node.result_id:
+                    node.add_edge(bibcouple_id)
+
+            rootpub_node.add_edge(result_id)
+
     return full_node_dict
 
 

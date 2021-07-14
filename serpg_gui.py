@@ -682,10 +682,8 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
     app.update_output_message("Starting retrieval of data")
     app.master.update()
     try:
-        alldata_col = ['Title', 'Year', 'Abstract', 'Authors', 'Authors_id', 'Hyperlink', 'Citedby_id', 'No_of_citations', 'Result_id']
+        alldata_col = ['Title', 'Year', 'Abstract', 'Authors', 'Authors_id', 'Hyperlink', 'Citedby_id', 'No_of_citations', 'Result_id', "Type of Pub", "Citing_pubs_id"]
         alldata_df = pd.DataFrame(columns=alldata_col)
-        main_data_col = ['Title', 'Year', 'Abstract', 'Authors', 'Authors_id', 'Hyperlink', 'Citedby_id', 'No_of_citations', 'Result_id', 'Citing_pubs_id']
-        main_data_df = pd.DataFrame(columns=main_data_col)
 
         app.progress_bar["value"] = 10
         app.master.update()
@@ -697,25 +695,22 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
         while (total_retrieved < limit):
             
             num_to_retrieve = 20 if remainder >= 20 else remainder
-            alldata, mainpubs = serpg.retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_limit, total_retrieved)
+            alldata, retrieved_counter = serpg.retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_limit, total_retrieved)
             
-            total_retrieved += len(mainpubs.keys())
+            total_retrieved += retrieved_counter
             alldata_df = serpg.add_to_df(alldata_df, alldata)
-            main_data_df = serpg.add_to_df(main_data_df, mainpubs)
 
             app.update_output_message("Retrieved " + str(total_retrieved) + " number of documents")
             app.progress_bar["value"] += (80/limit)
             app.master.update()
 
-        if (alldata_df.empty or main_data_df.empty):
+        if (alldata_df.empty):
             raise Exception("No publications retrieved, please check Google Scholar API or Inputs")
 
         alldata_path = savepath + "/alldata.xlsx"
         alldata_df.to_excel(alldata_path, index=False)
-        mainpub_path = savepath + "/main_pubs.xlsx"
-        main_data_df.to_excel(mainpub_path, index=False)
 
-        app.update_output_message("Retrieval of data Complete")
+        app.update_output_message("Retrieval of Data Complete")
         app.progress_bar["value"] = 100
         app.master.update()
 
