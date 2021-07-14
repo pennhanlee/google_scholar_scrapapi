@@ -97,105 +97,6 @@ def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_li
             
     return alldata_dict, rootpub_counter
 
-    
-
-
-def retrieve_docs(topic, min_year, max_year, limit, citation_limit, key):
-    ''' Retrieves publications of a topic in Google Scholar through the SERPAPI
-    as well as the publications that cite this publication iteratively until the 
-    provided limit is reached. 
-
-    Parameters
-    ----------------
-    topic : str
-                the topic of interest
-
-    min_year : int
-                the earliest year to limit the period of publication retrieval
-
-    max_year : int
-                the latest year to limit the period of publication retrieval
-
-    limit : int
-                the number of publications wanted
-
-    citation_limit : int
-                the number of citing publications wanted
-
-    key : str
-                the api key to connect SERPAPI successfully
-
-    Returns
-    ---------------
-    alldata_df : pandas DataFrame
-                a DataFrame containing all publications extracted
-
-                columns : ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id']
-
-    mainpubs_df : pandas DataFrame
-                a DataFrame containing root publications extracted. Does
-                not contain publications extracted by retrieve_citing_pub(...)
-
-                columns : ['Title', 'Year', 'Abstract', 'Citedby_id', 'No_of_citations', 'Result_id', 'Type_of_Pub', 'Citing_pubs_id']
-
-    '''
-
-    total_retrieved = 0
-    alldata_col = ['Title', 'Year', 'Abstract', 'Authors', 'Authors_id', 'Hyperlink', 'Citedby_id', 'No_of_citations', 'Result_id']
-    alldata_df = pd.DataFrame(columns=alldata_col)
-    main_data_col = ['Title', 'Year', 'Abstract', 'Authors', 'Authors_id', 'Hyperlink', 'Citedby_id', 'No_of_citations', 'Result_id', 'Citing_pubs_id']
-    main_data_df = pd.DataFrame(columns=main_data_col)
-    while (total_retrieved < limit):
-        remainder = limit - total_retrieved
-        num_to_retrieve = 20 if remainder >= 20 else remainder
-        params = {
-            "api_key": key,
-            "engine": "google_scholar",
-            "q": topic,
-            "hl": "en",
-            "as_ylo": min_year,
-            "as_yhi": max_year,
-            "start": total_retrieved,
-            "num": num_to_retrieve
-        }
-        search = GoogleSearch(params)
-        results = search.get_dict()
-        if ("organic_results" in results):
-            result_list = results["organic_results"]
-            for entry in result_list:
-                title = entry["title"]
-                year = extract_year(entry["publication_info"]["summary"])
-                snippet = entry["snippet"] if "snippet" in entry else "Empty"
-                cites_id = entry["inline_links"].get("cited_by").get("cites_id") if "cited_by" in entry["inline_links"] else "Empty"
-                year, authors, authors_id = extract_year_and_authors(entry["publication_info"]["authors"])
-                hyperlink = entry["link"]
-                total_cites = entry["inline_links"].get("cited_by").get("total") if "cited_by" in entry["inline_links"] else 0
-                result_id = entry["result_id"]
-
-                node_data, citing_result_id = retrieve_citing_pub(cites_id,
-                                                                  min_year, max_year,
-                                                                  citation_limit, key)
-
-                alldata_df_entry = [title, year, snippet,
-                                    cites_id, total_cites, result_id]
-                main_df_entry = [title, year, snippet, cites_id, total_cites,
-                                 result_id, "Main_Pub", citing_result_id]
-
-                main_data_df.loc[len(main_data_df.index)] = main_df_entry
-                if (alldata_df.loc[(alldata_df['Result_id'] == result_id)].empty):
-                    alldata_df.loc[len(alldata_df.index)] = alldata_df_entry
-                alldata_df = add_to_df(alldata_df, node_data)
-            total_retrieved += len(result_list)
-        else:
-            break
-
-    alldata_path = SAVE_PATH + "/alldata.xlsx"
-    alldata_df.to_excel(alldata_path, index=False)
-    mainpub_path = SAVE_PATH + "/main_pubs.xlsx"
-    main_data_df.to_excel(mainpub_path, index=False)
-
-    return alldata_df, main_data_df
-
 
 def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
     ''' Retrieves the citing publications of a specific publication in Google Scholar through the SERPAPI
@@ -267,25 +168,6 @@ def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
             break
     citing_pub_id_string = ";".join(result_id_list)
     return node_data, citing_pub_id_string
-
-
-def extract_year(string):
-    ''' extracts the year, limited to 1900 - 2099, from a given string
-
-    Paramenters
-    ---------------
-    string : str, provided string of characters
-
-    Returns
-    --------------
-    int : int type of the year contained in the string or 0 if no match is found
-    '''
-
-    match = re.search(r'\b(19|20)\d{2}(?=[ ])(?![^ ])\b', string)
-    if match:
-        return int(match.group())
-    else:
-        return 0
 
 def extract_year_and_authors(publication_info):
     ''' extracts the authors and their ids from a list of dictionaries retrieved from google scholar
@@ -372,36 +254,6 @@ def getKey():
         key = data['SERPAPIKey']
     json_file.close()
     return key
-
-
-def main():
-    topic = input("Please indicate topic to be researched on: ")
-    min_year = int(input("Please indicate min year eg. 2010: "))
-    max_year = int(input("Please indicate max year eg. 2020: "))
-    limit = int(input("Please indicate the number of root documents eg. 20: "))
-    citation_limit = int(input(
-        "Please indicate the number of citing documents per root document eg. 20: "))
-    api_key = getKey()
-    global SAVE_PATH  # Change global constant
-    SAVE_PATH = "./data/" + CURRENT_TIME_STRING + "_" + topic + "/"
-    if not os.path.exists(SAVE_PATH):
-        os.makedirs(SAVE_PATH)
-    alldata_df, main_pubs_df = retrieve_docs(
-        topic, min_year, max_year, limit, citation_limit, api_key)
-    return None
-
-
-def get_google_data(save_folder, topic, min_year, max_year, root_doc, cite_doc):
-    api_key = getKey()
-    global SAVE_PATH
-    SAVE_PATH = save_folder
-    min_year = int(min_year)
-    max_year = int(max_year)
-    root_doc = int(root_doc)
-    cite_doc = int(cite_doc)
-    alldata_df, main_pubs_df = retrieve_docs(
-        topic, min_year, max_year, root_doc, cite_doc, api_key)
-    return 0
 
 
 if __name__ == "__main__":
