@@ -86,8 +86,8 @@ def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_li
             total_cites = entry["inline_links"].get("cited_by").get("total") if "cited_by" in entry["inline_links"] else 0
             result_id = entry["result_id"]
 
-            node_data, citing_result_id = retrieve_citing_pub(cite_id, min_year, max_year, citation_limit, key)
-            alldata_df_entry = Node(title, year, snippet, authors, authors_id, hyperlink, cite_id, total_cites, result_id, "Root Publication", citing_result_id)
+            node_data, citing_result_id = retrieve_citing_pub(result_id, cite_id, min_year, max_year, citation_limit, key)
+            alldata_df_entry = Node(title, year, snippet, authors, authors_id, hyperlink, cite_id, total_cites, result_id, "Root Publication", citing_pub_id=citing_result_id)
 
             alldata_dict[result_id] = alldata_df_entry
             if result_id in node_data:
@@ -98,7 +98,7 @@ def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_li
     return alldata_dict, rootpub_counter
 
 
-def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
+def retrieve_citing_pub(root_pub_id, cites_id, min_year, max_year, citation_limit, key):
     ''' Retrieves the citing publications of a specific publication in Google Scholar through the SERPAPI
 
     Parameters
@@ -159,7 +159,7 @@ def retrieve_citing_pub(cites_id, min_year, max_year, citation_limit, key):
                 hyperlink = doc["link"] if "link" in doc else "Unavaliable"
                 total_cites = doc["inline_links"].get("cited_by").get("total") if "cited_by" in doc["inline_links"] else 0
                 result_id = doc["result_id"]
-                node = Node(title, year, snippet, authors, authors_id, hyperlink, cite_id, total_cites, result_id, "Citing Publication")
+                node = Node(title, year, snippet, authors, authors_id, hyperlink, cite_id, total_cites, result_id, "Citing Publication", cites=root_pub_id)
                 # node_in_list_form = [title, year, snippet, authors, authors_id, hyperlink, cites_id, total_cites, result_id, "Citing Publication", ""]
                 node_data[result_id] = node
                 result_id_list.append(result_id)
@@ -227,7 +227,7 @@ def add_to_df(df, pub_dict):
     for pub_id, pub in pub_dict.items():
         publication = [pub.title, pub.year, pub.abstract, pub.authors, 
                         pub.author_id, pub.hyperlink, pub.cite_id, 
-                        pub.cite_count, pub.result_id, pub.type , pub.citing_pub_id]
+                        pub.cite_count, pub.result_id, pub.type , pub.citing_pub_id, pub.cites]
         if (df.loc[(df['Result_id'] == pub_id)].empty):  # avoiding duplicates
             df_entry = publication
             df.loc[len(df.index)] = df_entry
@@ -236,6 +236,7 @@ def add_to_df(df, pub_dict):
             if (pub_in_df["Type of Pub"] == "Citing Publication" and pub.type == "Root Publication"):
                 pub_in_df["Type of Pub"] = "Root Publication"
                 pub_in_df["Citing_pubs_id"] = pub.citing_pub_id
+                pub_in_df["Cites"] = pub_in_df["Cites"] + ";" + pub.cites
                 
     return df
 

@@ -533,7 +533,6 @@ class Application(tk.Frame):
 
         all_valid = True
         alldata_file = alldata_path.get()
-        mainpubs_file = mainpubs_path.get()
         folder_path = save_path.get()
         minimum_year = min_year.get()
         maximum_year = max_year.get()
@@ -542,11 +541,6 @@ class Application(tk.Frame):
         if (len(alldata_file) == 0) or not path.exists(alldata_file):
             alldata_path.config({'background': ERROR_COLOUR})
             error_message += "Alldata.xlsx file path does not exist. \n"
-            all_valid = False
-
-        if (len(mainpubs_file) == 0) or not path.exists(mainpubs_file):
-            mainpubs_path.config({'background': ERROR_COLOUR})
-            error_message += "Mainpubs.xlsx file path does not exist. \n"
             all_valid = False
 
         if (len(folder_path) == 0) or not path.exists(folder_path):
@@ -570,11 +564,11 @@ class Application(tk.Frame):
             all_valid = False  
         
         if (all_valid):
-            all_entry = [alldata_path, mainpubs_path, save_path, min_year, max_year, min_strength]
+            all_entry = [alldata_path, save_path, min_year, max_year, min_strength]
             for entry in all_entry:
                 entry.config({'background': SIDEBAR_LIGHTGREY})
             print("EXECUTING")
-            analysis_of_data(alldata_file, mainpubs_file, folder_path, minimum_year, maximum_year, minimum_strength)
+            analysis_of_data(alldata_file, folder_path, minimum_year, maximum_year, minimum_strength)
             return "COMPLETED"
         else:
             self.update_output_message(error_message)
@@ -682,7 +676,7 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
     app.update_output_message("Starting retrieval of data")
     app.master.update()
     try:
-        alldata_col = ['Title', 'Year', 'Abstract', 'Authors', 'Authors_id', 'Hyperlink', 'Citedby_id', 'No_of_citations', 'Result_id', "Type of Pub", "Citing_pubs_id"]
+        alldata_col = ['Title', 'Year', 'Abstract', 'Authors', 'Authors_id', 'Hyperlink', 'Citedby_id', 'No_of_citations', 'Result_id', "Type of Pub", "Citing_pubs_id", "Cites"]
         alldata_df = pd.DataFrame(columns=alldata_col)
 
         app.progress_bar["value"] = 10
@@ -722,7 +716,7 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
 
     return 0
 
-def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year, min_strength):
+def analysis_of_data(alldata_file, savepath, min_year, max_year, min_strength):
     min_year = int(min_year)
     max_year = int(max_year)
     min_strength = int(min_strength)
@@ -731,8 +725,6 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year, 
     app.master.update()
     try: 
         alldata_df = pd.read_excel(alldata_file)
-        mainpubs_df = pd.read_excel(mainpubs_file)
-        
 
         no_of_topics = int(len(alldata_df.index) * 0.10)   # 10% of all publications in the topic
         topics, lda_model, dictionary = topic_model.prepare_topics(alldata_df, no_of_topics)
@@ -742,11 +734,11 @@ def analysis_of_data(alldata_file, mainpubs_file, savepath, min_year, max_year, 
         app.progress_bar["value"] = 10
         app.master.update()
 
-        node_dict = analysis.create_nodes(alldata_df, mainpubs_df)
+        node_dict = analysis.create_nodes(alldata_df)
         app.update_output_message("Number of nodes: " + str(len(node_dict.keys())))
         app.progress_bar["value"] = 15
         app.master.update()
-        connected_nodes_list, components = analysis.create_network_file(node_dict, alldata_df, min_strength, savepath)
+        components = analysis.create_network_file_2(node_dict, alldata_df, min_strength, savepath)
 
         app.progress_bar["value"] = 20
         app.master.update()

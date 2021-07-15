@@ -54,7 +54,7 @@ def create_nodes(alldata_df):
         rootpub_node = Node(rootpub["Title"], rootpub["Year"], rootpub["Abstract"], rootpub["Authors"],
                             rootpub["Authors_id"], rootpub["Hyperlink"], rootpub['Citedby_id'],
                             rootpub["No_of_citations"], rootpub["Result_id"], rootpub["Type of Pub"],
-                            rootpub["Citing_pubs_id"], rootpub['Topic Number'], rootpub['Topic'], 
+                            rootpub["Citing_pubs_id"], rootpub["Cites"], rootpub['Topic Number'], rootpub['Topic'], 
                             rootpub['Topic Probability'])
         citing_pubs_id_list=rootpub["Citing_pubs_id"].split(";")
         if rootpub_node.result_id not in full_node_dict:
@@ -72,7 +72,7 @@ def create_nodes(alldata_df):
                 node=Node(citing_pub["Title"], citing_pub["Year"], citing_pub["Abstract"], citing_pub["Authors"],
                             citing_pub["Authors_id"], citing_pub["Hyperlink"], citing_pub['Citedby_id'],
                             citing_pub["No_of_citations"], citing_pub["Result_id"], citing_pub["Type of Pub"],
-                            citing_pub["Citing_pubs_id"], citing_pub['Topic Number'], citing_pub['Topic'],
+                            citing_pub["Citing_pubs_id"], citing_pub["Cites"], citing_pub['Topic Number'], citing_pub['Topic'],
                             citing_pub['Topic Probability'])
                 full_node_dict[node.result_id]=node
             else:
@@ -191,91 +191,159 @@ def create_network_file(node_dict, alldata_df, min_strength, savepath):
 
     return connected_nodes, clusters
 
+def create_network_file_2(node_dict, alldata_df, min_strength, savepath):
+    node_in_network = set()
+    network_graph=nx.Graph()
+    final_interaction_list = []
+    for node_id, node in node_dict.items():
+        pub_couple_dict = node.edge_dict
+        pub_id = node_id
+        node_in_network.add(pub_id)
+        added_to_graph = False
+        interactions = create_bib_couple_edges(node, alldata_df, min_strength)
+        for interaction in interactions:
+            pub_1_id = interaction[0]
+            pub_2_id = interaction[1]
+            couple_edge_weight = interaction[2]
+            if (pub_2_id in node_in_network):
+                continue
+            else:
+                network_graph.add_edge(pub_1_id, pub_2_id, weight=couple_edge_weight)
+                final_interaction_list.append(interaction)
+                added_to_graph=True
+        if not added_to_graph:
+            network_graph.add_node(pub_id)
+
+    components=_create_clusters_greedynewman(network_graph)
+
+    col=['Pub_1', 'Pub_2', 'Weight', "Interaction", 
+          'Pub_1_title', 'Pub_1_abstract', 'Pub_1_year', 'Pub_1_authors', 'Pub_1_topic', 'Pub_1_link', "Pub_1_type",
+          'Pub_2_title', 'Pub_2_abstract', 'Pub_2_year', 'Pub_2_authors', 'Pub_2_topic', 'Pub_2_link', "Pub_2_type" ]
+    network_df = pd.DataFrame(data=final_interaction_list, columns=col)
+    create_outlier_files(components, alldata_df, savepath)
+    network_df, clusters = tag_publication_to_clusters(network_df, components)
+    
+    root_and_citing_pubs = link_root_and_cite_pubs(alldata_df)
+
+    for interaction in root_and_citing_pubs:
+        network_df.loc[len(network_df.index)] = interaction
+
+    network_path=savepath + "/network.xlsx"
+    network_df.to_excel(network_path, index=False)
+
+    return clusters
+
+def link_root_and_cite_pubs(alldata_df):
+    root_pub_df = alldata_df[alldata_df["Type of Pub"] == "Root Publication"]
+    root_cite_interaction = []
+    for index, row in root_pub_df.iterrows():
+        root_pub = row
+        root_pub_id = row["Result_id"]
+        root_pub_title = root_pub["Title"]
+        root_pub_abstract = root_pub["Abstract"]
+        root_pub_year = root_pub["Year"]
+        root_pub_authors = root_pub["Authors"]
+        root_pub_topic = root_pub["Topic"]
+        root_pub_hyperlink = root_pub["Hyperlink"]
+        root_pub_type = root_pub["Type of Pub"]
+        root_pub_citing_pubs = root_pub["Citing_pubs_id"]
+        list_of_citing_pubs = root_pub_citing_pubs.split(";")
+        for citing_pub_id in list_of_citing_pubs:
+            citing_pub = alldata_df.loc[alldata_df["Result_id"] == citing_pub_id]
+            citing_pub = citing_pub.iloc[0]
+            citing_pub_title = citing_pub["Title"]
+            citing_pub_abstract = citing_pub["Abstract"]
+            citing_pub_year = citing_pub["Year"]
+            citing_pub_authors = citing_pub["Authors"]
+            citing_pub_topic = citing_pub["Topic"]
+            citing_pub_hyperlink = citing_pub["Hyperlink"]
+            citing_pub_type = citing_pub["Type of Pub"]
+            citing_pub_cites = citing_pub["Cites"]
+            interaction = [root_pub_id, citing_pub_id, 1, "Cited By", 
+                                root_pub_title, root_pub_abstract, root_pub_year, root_pub_authors, root_pub_topic, root_pub_hyperlink, root_pub_type, 
+                                citing_pub_title, citing_pub_abstract, citing_pub_year, citing_pub_authors, citing_pub_topic, citing_pub_hyperlink, citing_pub_type, ""]
+            root_cite_interaction.append(interaction)
+
+    return root_cite_interaction
+
+def create_bib_couple_edges(node, alldata_df, min_strength):
+    interaction_list = []
+    bib_couple_dict = node.edge_dict
+    pub_id = node.result_id
+    pub_title = node.title
+    pub_abstract = node.abstract
+    pub_year = node.year
+    pub_authors = node.authors
+    pub_topic = node.topic
+    pub_hyperlink = node.hyperlink
+    pub_type = node.type
+    pub_cites = node.cites
+    for couple_id, couple_edge_weight in bib_couple_dict.items():
+        if couple_edge_weight >= min_strength:
+            couple_pub = alldata_df.loc[alldata_df["Result_id"] == couple_id]
+            couple_pub = couple_pub.iloc[0]
+            couple_pub_id = couple_id
+            couple_pub_title = couple_pub["Title"]
+            couple_pub_abstract = couple_pub["Abstract"]
+            couple_pub_year = couple_pub["Year"]
+            couple_pub_authors = couple_pub["Authors"]
+            couple_pub_topic = couple_pub["Topic"]
+            couple_pub_hyperlink = couple_pub["Hyperlink"]
+            couple_pub_type = couple_pub["Type of Pub"]
+            couple_pub_cites = couple_pub["Cites"]
+            interaction = [pub_id, couple_pub_id, couple_edge_weight, "Bibliographic Couple", 
+                            pub_title, pub_abstract, pub_year, pub_authors, pub_topic, pub_hyperlink, pub_type,
+                            couple_pub_title, couple_pub_abstract, couple_pub_year, couple_pub_authors, couple_pub_topic, couple_pub_hyperlink, couple_pub_type]
+            interaction_list.append(interaction)
+
+    return interaction_list
+
+def tag_publication_to_clusters(network_df, components):
+    temp_df_list = []
+    clusters = []
+    cluster_counter = 1
+    for x in range(0, len(components)):
+        cluster = components[x]
+        if len(cluster) <= 1:
+            continue
+
+        temp_df = network_df[network_df["Pub_1"].isin(cluster)]  # add cluster number to nodes
+        temp_df.insert(len(temp_df.columns), "Cluster", cluster_counter)
+        temp_df_list.append(temp_df)
+        clusters.append(cluster)
+        cluster_counter += 1
+    
+    new_df = pd.concat(temp_df_list)
+    
+    return new_df, clusters
+
+def create_outlier_files(components, alldata_df, savepath):
+    recent_outlier = []
+    outlier = []
+    for x in range(0, len(components)):
+        cluster=components[x]
+        if (len(cluster) <= 1):
+            temp_df=alldata_df[alldata_df["Title"].isin(cluster)]  # add cluster number to nodes
+            if is_recent_outlier(temp_df.iloc[0]["Year"], alldata_df["Year"].max()):
+                recent_outlier.append(temp_df)
+            else:
+                outlier.append(temp_df)
+
+    recent_outlier_path = savepath + "/recently emerging outliers.xlsx"
+    outlier_path = savepath + "/outliers.xlsx"
+    recent_outlier_df = pd.concat(recent_outlier) if (len(recent_outlier) > 0) else pd.DataFrame()
+    recent_outlier_df.to_excel(recent_outlier_path, index=False)
+    outlier_df = pd.concat(outlier) if (len(recent_outlier) > 0) else pd.DataFrame()
+    outlier_df.to_excel(outlier_path, index=False)
+
+    return alldata_df
+    
 
 def is_recent_outlier(year, max_year):
     if (max_year - year < 3):
         return True
     else:
         return False
-
-
-def create_cluster_indi(components, alldata_df, word_bank, min_year, max_year, lda_model, dictionary):
-    ''' Analyses entries of each cluster in the publications DataFrame and groups the entries into
-        its individual cluster dataframe. Creates wordcloud and linegraph for each cluster.
-
-        Parameter
-        ------------
-        components : list
-                list of clusters
-
-        alldata_df : pandas DataFrame
-                a DataFrame containing all publications extracted
-                columns : ['Title', 'Year', 'Abstract',
-                    'Citedby_id', 'No_of_citations', 'Result_id']
-
-        word_bank : dict
-                dictionary of words and frequencies.
-                key, value: word, frequency
-
-        min_year : int
-                the earliest year to limit the period of publication retrieval
-
-        max_year : int
-                the latest year to limit the period of publication retrieval
-
-        lda_model : LDA model object
-                trained Latent Dirichlet Algorithm
-
-        dictionary : dict
-                Dictionary of words and occurrence frequency
-                key, value = word, frequency
-
-        Returns
-        ----------
-        clusters : dict
-                Dictionary of cluster name to cluster DataFrame
-                key, value : name, cluster dataframe
-
-        linegraph_data_dict : dict
-                Dictionary of cluster name to cluster linegraph
-                key, value : name, cluster linegraph
-    '''
-
-    clusters={}
-    linegraph_data_dict={}
-    no_of_doc=len(alldata_df.index)
-
-    for x in range(0, len(components)):
-        print("Starting analysis on Component " + \
-              str(x+1) + "/" + str(len(components)))
-        cluster_no=x + 1
-        cluster=components[x]
-        cluster_df=alldata_df[alldata_df["Title"].isin(cluster)]
-        cluster_df.insert(len(cluster_df.columns), "Cluster", cluster_no)
-        cluster_word_dict, cluster_name, raw_word_list=textminer.mine_cluster(
-            cluster_df, word_bank, no_of_doc, "Title", "Abstract")
-        word_list=textminer_nlp.get_word_list(cluster_df, "Title", "Abstract")
-        # cluster_summary = textminer_nlp.create_extractive_summary(cluster_df, 2)
-        # print(cluster_name)
-        # print(cluster_summary)
-        if not os.path.exists(SAVEPATH + "/{}".format(cluster_name)):
-            os.makedirs(SAVEPATH + "/{}".format(cluster_name))
-        data_path=SAVEPATH + "/{}/{}.xlsx".format(cluster_name, cluster_name)
-        linegraph_path=SAVEPATH + "/{}/linegraph.png".format(cluster_name)
-        wordcloud_path=SAVEPATH + "/{}/wordcloud.png".format(cluster_name)
-        cluster_df.to_excel(data_path, index=False)
-        clusters[cluster_name]=cluster_df
-        graphcreator.generate_word_cloud(word_list, wordcloud_path)
-        linegraph_data=graphcreator.generate_year_linegraph(
-            cluster_df, linegraph_path, min_year, max_year)
-        linegraph_data_dict[cluster_name]=linegraph_data
-        print("Completed analysis on Component " + str(x+1) + \
-              "/" + str(len(components)) + ": " + cluster_name)
-    combined_df=pd.concat(clusters)
-    combineddata_path=SAVEPATH + "/combined_data.xlsx"
-    combined_df.to_excel(combineddata_path, index=False)
-
-    return clusters, linegraph_data_dict
 
 def create_cluster_indi_2(cluster, cluster_no, cluster_name, alldata_df, min_year, max_year, savepath):
     ''' Analyses entries of one cluster in the publications DataFrame and groups the entries into
@@ -328,9 +396,10 @@ def create_cluster_indi_2(cluster, cluster_no, cluster_name, alldata_df, min_yea
     '''
 
     no_of_doc=len(alldata_df.index)
-    cluster_df=alldata_df[alldata_df["Title"].isin(cluster)]
+    cluster_df=alldata_df[alldata_df["Result_id"].isin(cluster)]
     cluster_df.insert(len(cluster_df.columns), "Cluster", cluster_no)
     word_list=textminer_nlp.get_word_list(cluster_df, "Title", "Abstract")
+    cluster_name = "cluster " + str(cluster_no)
     # cluster_summary = textminer_nlp.create_extractive_summary(cluster_df, 2)
     # print(cluster_name)
     # print(cluster_summary)
@@ -338,11 +407,13 @@ def create_cluster_indi_2(cluster, cluster_no, cluster_name, alldata_df, min_yea
         os.makedirs(savepath + "/{}".format(cluster_name))
     data_path=savepath + "/{}/{}.xlsx".format(cluster_name, cluster_name)
     linegraph_path=savepath + "/{}/linegraph.png".format(cluster_name)
+    quadrantgraph_path=savepath + "/{}/linegraph.png".format(cluster_name)
     wordcloud_path=savepath + "/{}/wordcloud.png".format(cluster_name)
     cluster_df.to_excel(data_path, index=False)
     graphcreator.generate_word_cloud(word_list, wordcloud_path)
     linegraph_data=graphcreator.generate_year_linegraph(
         cluster_df, linegraph_path, min_year, max_year)
+    quadrant_graph = graphcreator.generate_quadrant_graph(cluster_df, quadrantgraph_path)
 
     return cluster_df, linegraph_data
 

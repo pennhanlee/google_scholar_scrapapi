@@ -111,3 +111,6 @@ def generate_summary_linegraph(linegraph_data, save_path):
                 bbox_inches="tight")
     plt.close()
     return None
+
+def generate_summary_linegraph(df, save_path):
+    return 0

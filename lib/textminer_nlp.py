@@ -393,10 +393,11 @@ def create_cluster_names(clusters, df, num_words, *args):
     alldata_df = df
     list_of_tf_table = []
     cluster_names = []
+    cluster_number = 1
     total_doc_count = len(df.index)
     for x in range(0, len(clusters)):
         cluster = clusters[x]
-        cluster_df = alldata_df[alldata_df["Title"].isin(cluster)]
+        cluster_df = alldata_df[alldata_df["Result_id"].isin(cluster)]
         tf_table = create_tf_table(cluster_df, "Title", "Abstract")
         list_of_tf_table.append(tf_table)
 
@@ -405,7 +406,7 @@ def create_cluster_names(clusters, df, num_words, *args):
         tf_idf_table = create_tf_idf_table(tf_table, idf_table)
         tf_idf_ordered_list = sorted(tf_idf_table.items(), key = lambda item:item[1])
         cluster_name = " ".join([tf_idf_ordered_list[x][0] for x in range(0, num_words)])
-        cluster_names.append(cluster_name)
-
+        cluster_names.append(str(cluster_number) + " " + cluster_name)
+        cluster_number += 1
 
     return cluster_names
