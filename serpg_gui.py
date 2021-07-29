@@ -239,46 +239,45 @@ class Application(tk.Frame):
         all_data_btn = self.get_file_button(frame, all_data_file)
         all_data_btn.place(relx=0.75, rely=0.15, relwidth=0.1, relheight=0.05)
 
-        main_data_label = tk.Label(
-            frame, text="Please provide filepath to main_pubs.xlsx", bg=MAINWINDOW_WHITE)
-        main_data_label.place(relx=0.1, rely=0.25, relwidth=0.6, relheight=0.05)
-        main_data_file = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
-        main_data_file.place(relx=0.1, rely=0.30, relwidth=0.6, relheight=0.05)
-        main_data_btn = self.get_file_button(frame, main_data_file)
-        main_data_btn.place(relx=0.75, rely=0.30, relwidth=0.1, relheight=0.05)
-
         save_folder_label = tk.Label(
             frame, text="Please provide path to folder to save the documents", bg=MAINWINDOW_WHITE)
-        save_folder_label.place(relx=0.1, rely=0.40, relwidth=0.6, relheight=0.05)
+        save_folder_label.place(relx=0.1, rely=0.25, relwidth=0.6, relheight=0.05)
         save_folder = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
-        save_folder.place(relx=0.1, rely=0.45, relwidth=0.6, relheight=0.05)
+        save_folder.place(relx=0.1, rely=0.30, relwidth=0.6, relheight=0.05)
         save_folder_btn = self.get_folder_button(frame, save_folder)
-        save_folder_btn.place(relx=0.75, rely=0.45, relwidth=0.1, relheight=0.05)
+        save_folder_btn.place(relx=0.75, rely=0.30, relwidth=0.1, relheight=0.05)
 
         min_year_label = tk.Label(
             frame, text="Please indicate \nearliest year eg. 2010", bg=MAINWINDOW_WHITE)
-        min_year_label.place(relx=0.1, rely=0.55, relwidth=0.2, relheight=0.1)
+        min_year_label.place(relx=0.1, rely=0.45, relwidth=0.2, relheight=0.1)
         min_year = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
         min_year.config(validate="key", validatecommand=(reg_valid_number, "%P"))
-        min_year.place(relx=0.1, rely=0.65, relwidth=0.2, relheight=0.05)
+        min_year.place(relx=0.1, rely=0.55, relwidth=0.2, relheight=0.05)
 
         max_year_label = tk.Label(
             frame, text="Please indicate \nlatest year eg. 2020", bg=MAINWINDOW_WHITE)
-        max_year_label.place(relx=0.4, rely=0.55, relwidth=0.2, relheight=0.1)
+        max_year_label.place(relx=0.4, rely=0.45, relwidth=0.2, relheight=0.1)
         max_year = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
         max_year.config(validate="key", validatecommand=(reg_valid_number, "%P"))
-        max_year.place(relx=0.4, rely=0.65, relwidth=0.2, relheight=0.05)
+        max_year.place(relx=0.4, rely=0.55, relwidth=0.2, relheight=0.05)
 
         min_str_label = tk.Label(
             frame, text="Please indicate min \nedge strength eg. 2", bg=MAINWINDOW_WHITE)
-        min_str_label.place(relx=0.7, rely=0.55, relwidth=0.2, relheight=0.1)
+        min_str_label.place(relx=0.1, rely=0.65, relwidth=0.2, relheight=0.1)
         min_str = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
         min_str.config(validate="key", validatecommand=(reg_valid_number, "%P"))
-        min_str.place(relx=0.7, rely=0.65, relwidth=0.2, relheight=0.05)
+        min_str.place(relx=0.1, rely=0.75, relwidth=0.2, relheight=0.05)
 
-        start_analysis = self.start_analysis_button(frame, all_data_file, main_data_file,
-                                                    save_folder, min_year, max_year, min_str)
-        start_analysis.place(relx=0.1, rely=0.75, relwidth=0.6, relheight=0.1)
+        algo_label = tk.Label(
+            frame, text="Please indicate clustering algorithm. \n 0 - Clauset Newman Moore Algorithm \n 1 - Girvan Newman Algorithm", bg=MAINWINDOW_WHITE)
+        algo_label.place(relx=0.3, rely=0.62, relwidth=0.4, relheight=0.15)
+        algo = tk.Entry(master=frame, bg=SIDEBAR_LIGHTGREY)
+        algo.config(validate="key", validatecommand=(reg_valid_number, "%P"))
+        algo.place(relx=0.4, rely=0.75, relwidth=0.2, relheight=0.05)
+
+        start_analysis = self.start_analysis_button(frame, all_data_file,
+                                                    save_folder, min_year, max_year, min_str, algo)
+        start_analysis.place(relx=0.1, rely=0.85, relwidth=0.6, relheight=0.1)
 
         return 0
 
@@ -390,7 +389,7 @@ class Application(tk.Frame):
                         command=lambda: self.retrieve_folder(frame, entry))
         return btn
 
-    def start_analysis_button(self, frame, alldata_path, mainpubs_path, save_path, min_year, max_year, min_strength):
+    def start_analysis_button(self, frame, alldata_path, save_path, min_year, max_year, min_strength, algo):
         '''Creates a button that will trigger the data analysis
 
         Parameters
@@ -418,9 +417,8 @@ class Application(tk.Frame):
         '''
 
         btn = btn = tk.Button(master=frame, text="Start Analysis",
-                              command=lambda: self.analyse_data(alldata_path, mainpubs_path,
-                                                                save_path, min_year, 
-                                                                max_year, min_strength))
+                              command=lambda: self.analyse_data(alldata_path, save_path, min_year, 
+                                                                max_year, min_strength, algo))
         return btn
 
     def retrieve_info_button(self, frame, savepath, topic, key, min_year, max_year, root_doc, cite_doc):
@@ -501,7 +499,7 @@ class Application(tk.Frame):
         entry.insert(tk.END, folder)
         return folder
 
-    def analyse_data(self, alldata_path, mainpubs_path, save_path, min_year, max_year, min_strength):
+    def analyse_data(self, alldata_path, save_path, min_year, max_year, min_strength, algo):
         ''' Function that will initiate the analysis of data. This function will execute
             input validation too.
 
@@ -537,6 +535,7 @@ class Application(tk.Frame):
         minimum_year = min_year.get()
         maximum_year = max_year.get()
         minimum_strength = min_strength.get()
+        cluster_algo = algo.get()
         error_message = ""
         if (len(alldata_file) == 0) or not path.exists(alldata_file):
             alldata_path.config({'background': ERROR_COLOUR})
@@ -562,13 +561,18 @@ class Application(tk.Frame):
             min_strength.config({'background': ERROR_COLOUR})
             error_message += "Minimum Edge Strength cannot be empty. \n"
             all_valid = False  
+
+        if (len(cluster_algo) == 0):
+            cluster_algo.config({'background': ERROR_COLOUR})
+            error_message += "Minimum Edge Strength cannot be empty. \n"
+            all_valid = False 
         
         if (all_valid):
-            all_entry = [alldata_path, save_path, min_year, max_year, min_strength]
+            all_entry = [alldata_path, save_path, min_year, max_year, min_strength, algo]
             for entry in all_entry:
                 entry.config({'background': SIDEBAR_LIGHTGREY})
             print("EXECUTING")
-            analysis_of_data(alldata_file, folder_path, minimum_year, maximum_year, minimum_strength)
+            analysis_of_data(alldata_file, folder_path, minimum_year, maximum_year, minimum_strength, cluster_algo)
             return "COMPLETED"
         else:
             self.update_output_message(error_message)
@@ -689,7 +693,7 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
         while (total_retrieved < limit):
             
             num_to_retrieve = 20 if remainder >= 20 else remainder
-            alldata, retrieved_counter = serpg.retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_limit, total_retrieved)
+            alldata, retrieved_counter = serpg.retrieve_docs(topic, key, min_year, max_year, num_to_retrieve, citation_limit, total_retrieved)
             
             total_retrieved += retrieved_counter
             alldata_df = serpg.add_to_df(alldata_df, alldata)
@@ -716,19 +720,20 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
 
     return 0
 
-def analysis_of_data(alldata_file, savepath, min_year, max_year, min_strength):
+def analysis_of_data(alldata_file, savepath, min_year, max_year, min_strength, cluster_algo):
     min_year = int(min_year)
     max_year = int(max_year)
     min_strength = int(min_strength)
+    cluster_algo = int(cluster_algo)
     print(min_strength)
     app.update_output_message("Starting retrieval of data")
     app.master.update()
     try: 
         alldata_df = pd.read_excel(alldata_file)
 
-        no_of_topics = int(len(alldata_df.index) * 0.10)   # 10% of all publications in the topic
-        topics, lda_model, dictionary = topic_model.prepare_topics(alldata_df, no_of_topics)
-        alldata_df = analysis.tag_pubs_to_topics(alldata_df, lda_model, dictionary)
+        # no_of_topics = int(len(alldata_df.index) * 0.10)   # 10% of all publications in the topic
+        # topics, lda_model, dictionary = topic_model.prepare_topics(alldata_df, no_of_topics)
+        # alldata_df = analysis.tag_pubs_to_topics(alldata_df, lda_model, dictionary)
 
         app.update_output_message("Creating Network file now")
         app.progress_bar["value"] = 10
@@ -738,7 +743,7 @@ def analysis_of_data(alldata_file, savepath, min_year, max_year, min_strength):
         app.update_output_message("Number of nodes: " + str(len(node_dict.keys())))
         app.progress_bar["value"] = 15
         app.master.update()
-        components = analysis.create_network_file_2(node_dict, alldata_df, min_strength, savepath)
+        components = analysis.create_network_file(node_dict, alldata_df, min_strength, cluster_algo, savepath)
 
         app.progress_bar["value"] = 20
         app.master.update()
@@ -747,7 +752,7 @@ def analysis_of_data(alldata_file, savepath, min_year, max_year, min_strength):
         clusters = {}
         linegraph_data_dict = {}
         for x in range(0, len(components)):
-
+            print("Component " + str(x + 1) + "/" + str(len(components)) + "Starting")
             cluster = components[x]
             cluster_no = x + 1
             cluster_name = cluster_names[x]
@@ -757,7 +762,7 @@ def analysis_of_data(alldata_file, savepath, min_year, max_year, min_strength):
             app.master.update()
 
             
-            cluster_df, linegraph_data = analysis.create_cluster_indi_2(cluster, cluster_no, cluster_name,
+            cluster_df, linegraph_data = analysis.create_cluster_indi(cluster, cluster_no, cluster_name,
                                                                         alldata_df, min_year, max_year, savepath)
             clusters[cluster_name] = cluster_df
             linegraph_data_dict[cluster_name] = linegraph_data

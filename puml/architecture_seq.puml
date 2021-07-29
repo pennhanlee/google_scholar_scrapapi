@@ -7,25 +7,30 @@ Participant ":Data Analysis" as da LOGIC_COLOR
 Participant ":CLUSTER/NLP" as nt MODEL_COLOR
 Participant ":Excel" as excel STORAGE_COLOR
 
-user -[USER_COLOR]> ui : "start analysis\n("./alldata.xlsx", \n "./mainpub.xlsx", \n 2010, 2020, \n 20, 20)
+user -[USER_COLOR]> ui : start analysis\n("./alldata.xlsx", "folder_path", \n 2010, 2020, \n 20, 20, 1, 0)
 activate ui UI_COLOR
 
-ui -[UI_COLOR]> da : "analyse\n("./alldata.xlsx", \n "./mainpub.xlsx", \n 2010, 2020, \n 20, 20)"
+ui -[UI_COLOR]> da : "analyse\n("./alldata.xlsx", "folder_path", \n 2010, 2020, \n 20, 20, 1, 0)"
 activate da LOGIC_COLOR
 
-da -[LOGIC_COLOR]> excel : "./alldata.xlsx & ./mainpubs.xlsx"
+da -[LOGIC_COLOR]> excel : "./alldata.xlsx"
 activate excel STORAGE_COLOR
 excel --[STORAGE_COLOR]> da
 deactivate excel
+
+da -[LOGIC_COLOR]> da : "create Network"
+
+da -[LOGIC_COLOR]> nt : "create Clusters"
+activate nt MODEL_COLOR
+nt --[MODEL_COLOR]> da
+deactivate nt
 
 da -[LOGIC_COLOR]> nt : "perform NLP"
 activate nt MODEL_COLOR
 nt --[MODEL_COLOR]> da
 deactivate nt
 
-da -[LOGIC_COLOR]> da : "create Network"
-
-da -[LOGIC_COLOR]> nt : "create Clusters"
+da -[LOGIC_COLOR]> nt : "calculate metrics"
 activate nt MODEL_COLOR
 nt --[MODEL_COLOR]> da
 deactivate nt

@@ -1,0 +1,67 @@
+@startuml
+!include style.puml
+
+box ApplyTopicModelling MODEL_COLOR_T1
+participant ":apply_topic_modelling()" as tm MODEL_COLOR
+end box
+
+box GetOptimalClusterValue MODEL_COLOR_T1
+participant ":get_optimal_cluster_value()" as ocv MODEL_COLOR
+endbox
+
+box PrepareTextForLda MODEL_COLOR_T1
+participant ":prepare_text_for_lda()" as ptl MODEL_COLOR
+endbox
+
+box PrepareLDA MODEL_COLOR_T1
+participant ":prepare_bow_dictionary()" as pbd MODEL_COLOR
+participant ":LdaModel()" as lda MODEL_COLOR
+endbox
+
+
+[-> tm : apply_topic_modelling(alldata_df)]
+activate tm MODEL_COLOR
+
+tm -[MODEL_COLOR]> ocv : "get_optimal_clusters(df)"
+activate ocv MODEL_COLOR
+ocv -[MODEL_COLOR]> ocv : "TFIDF_Vectorizer to plot Kmeans graph"
+ocv -[MODEL_COLOR]> ocv : "find_optimal_clusters(data, max_k)"
+ocv -[MODEL_COLOR]> tm : "optimal number"
+deactivate ocv
+
+loop for rows in dataframe
+    tm -[MODEL_COLOR]> ptl : "prepare_text_for_lda()"
+    activate ptl MODEL_COLOR
+    ptl -[MODEL_COLOR]> ptl : "tokenise"
+    ptl -[MODEL_COLOR]> tm : "doc_tokens"
+    deactivate ptl
+    tm -[MODEL_COLOR]> tm : "store token in text_list"
+end
+
+tm -[MODEL_COLOR]> pbd : "prepare_bow_dictionary(text_list)"
+activate pbd MODEL_COLOR
+pbd -[MODEL_COLOR]> tm : "dictionary, corpus"
+deactivate
+
+tm -[MODEL_COLOR]> lda : "LdaModel(corpus, optimal_num_topic, \n dictionary, passes=15, random_state=0)"
+activate lda MODEL_COLOR
+lda -[MODEL_COLOR]> tm : "LdaModel"
+deactivate lda
+
+loop for each row in dataframe
+    tm -[MODEL_COLOR]> ptl : "prepare_text_for_lda()"
+    activate ptl MODEL_COLOR
+    ptl -[MODEL_COLOR]> ptl : "tokenise"
+    ptl -[MODEL_COLOR]> tm : "doc_tokens"
+    deactivate ptl
+    tm -[MODEL_COLOR]> lda : "get_document_topics(doc_tokens)"
+    activate lda MODEL_COLOR
+    lda -[MODEL_COLOR]> tm : "document topics"
+    deactivate lda
+    tm -[MODEL_COLOR]> tm : "Choose top topic probability"
+    tm -[MODEL_COLOR]> tm : "Add to dataframe"
+end    
+
+[<- tm : return updated dataframe]
+
+@enduml

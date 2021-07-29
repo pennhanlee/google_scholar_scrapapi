@@ -1,17 +1,22 @@
 import random
 import pandas as pd
-import gensim
+import numpy as np
+from kneed import KneeLocator
+import matplotlib.pyplot as plt
 
-from nltk.stem.wordnet import WordNetLemmatizer
-from nltk.corpus import wordnet
-import nltk
-
-import spacy
+from nltk.corpus import wordnet, stopwords
 from spacy.lang.en import English
 
+from gensim.corpora import Dictionary
+from gensim.models.ldamodel import LdaModel
+
+from sklearn.cluster import KMeans
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 
 parser = English()
-en_stop = set(nltk.corpus.stopwords.words('english'))
+en_stop = set(stopwords.words('english'))
 
 
 def tokenise(text):
@@ -69,27 +74,6 @@ def get_lemma(word):
         return lemma
 
 
-def get_lemma2(word):
-    ''' Converts a given word by lemmatization into its root form.
-        
-        Parameters
-        ------------
-        word : str
-                a provided word to be lemmatized
-
-        Returns
-        -----------
-        word : str
-                the original word if lemmatization fails
-
-        or
-
-        lemma : str
-                the root form of the word
-    '''
-    return WordNetLemmatizer().lemmatize(word)
-
-
 def prepare_text_for_lda(text):
     ''' Prepares a string of words into individual words by processing
         the text through a minimum length of 4 chars, stopword filtering, lemmatizing
@@ -127,55 +111,19 @@ def prepare_bow_dictionary(text_list):
 
         corpus : gensim library corpus object
     ''' 
-    dictionary = gensim.corpora.Dictionary(text_list)
+    dictionary = Dictionary(text_list)
     corpus = [dictionary.doc2bow(text) for text in text_list]
     return dictionary, corpus
 
-def prepare_topics(dataframe, no_topics):
-    ''' Analyses the provided dataframe to produce a number of topics as
-        indicated by the user
 
-        Parameters
-        ------------
-        dataframe : pandas DataFrame
-                A dataframe containing publication information
 
-        no_topics : int
-                The intended number of topics to be produced
-
-        Returns
-        ----------
-        topics : gensim LDAModel 
-                The topics produced from the dataframe publication information
-
-        ldamodel : gensim LDAModel
-                The LDAModel produced through training using the provided data from the DataFrame
-
-        dictionary : gensim library dictionary object
-                A dictionary object by gensim that contains words in the text and its frequency
-    '''
-
-    text_list = []
-    for index, row in dataframe.iterrows():
-        tokens = prepare_text_for_lda(row["Title"])
-        text_list.append(tokens)
-
-    dictionary, corpus = prepare_bow_dictionary(text_list)
-
-    ldamodel = gensim.models.ldamodel.LdaModel(corpus, num_topics=no_topics, 
-                                                id2word=dictionary, passes=15, 
-                                                random_state=0)
-
-    topics = ldamodel.print_topics(num_words=4)
-    return topics, ldamodel, dictionary
-
-def retrieve_topic_for_doc(doc, ldamodel, dictionary):
+def retrieve_topic_for_doc(token_list, ldamodel, dictionary):
     ''' Analyses the documents and returns the probabilities for the topic that a document belongs to
 
         Parameters
         ------------
-        doc : str
-            A string of words
+        token_list : list
+                The list of words that was tokenised from the document
 
         ldamodel : gensim LDAModel
                 The LDAModel produced through training with a set of data
@@ -189,35 +137,88 @@ def retrieve_topic_for_doc(doc, ldamodel, dictionary):
                 A list of topics with probabilities of how close the document matchs the topics
     '''
     
-    content = prepare_text_for_lda(doc)
-    content_bow = dictionary.doc2bow(new_doc)
+    content_bow = dictionary.doc2bow(token_list)
     topic = ldamodel.get_document_topics(content_bow)
 
     return topic
 
-if __name__ == "__main__":
-    FILEPATH = "C:/Users/luciu/Desktop/NUS Lecture Notes/Y2S2/Summer Internship/bibicite/gscholar/data/16-06-2021_1444_Natural Language Processing/networks neural/networks neural.xlsx"
-    NUM_TOPICS = 5
-    cluster_df = pd.read_excel(FILEPATH)
+def get_optimal_cluster_value(df):
+    list_of_docs = []
+    for index, row in df.iterrows():
+        list_of_docs.append(row["Title"] + " " + row["Abstract"])
+
+    max_cluster = int(len(df.index) / 4) #25% of the size of the cluster
+
+    tfidf = TfidfVectorizer(min_df = 3, max_df = 0.95, max_features=8000, stop_words='english')
+    text = tfidf.fit_transform(list_of_docs)
+    optimal_cluster = find_optimal_clusters(text, max_cluster)
+    if optimal_cluster == None:
+        optimal_cluster = 1
+    return optimal_cluster
+
+
+def find_optimal_clusters(data, max_k):
+    iters = range(1, max_k+1)
+    sse = []
+    for k in iters:
+        sse.append(KMeans(n_clusters=k, random_state=20).fit(data).inertia_)
+
+    fig, ax = plt.subplots(1, 1)
+    ax.plot(iters, sse, marker='o')
+    ax.set_xlabel('Cluster Centers')
+    ax.set_xticks(iters)
+    ax.set_xticklabels(iters)
+    ax.set_ylabel('SSE')
+    ax.set_title('SSE by Cluster Center Plot')
+    kn = KneeLocator(iters, sse, curve='convex', direction='decreasing')
+    if kn.knee is not None:
+        plt.vlines(kn.knee, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')
+    return kn.knee
+
+
+def apply_topic_modelling(df):
+    num_of_topics = get_optimal_cluster_value(df)
+    print("NUMBER OF TOPICS " + str(num_of_topics))
     text_list = []
-    for index, row in cluster_df.iterrows():
+    for index, row in df.iterrows():
         tokens = prepare_text_for_lda(row["Title"])
+        tokens.extend(prepare_text_for_lda(row["Abstract"]))
         text_list.append(tokens)
 
     dictionary, corpus = prepare_bow_dictionary(text_list)
 
-    ldamodel = gensim.models.ldamodel.LdaModel(
-        corpus, num_topics=NUM_TOPICS, id2word=dictionary, passes=15, random_state=0)
+    ldamodel = LdaModel(
+        corpus, num_topics=num_of_topics, id2word=dictionary, passes=15, random_state=0)
 
-    topics = ldamodel.print_topics(num_words = 4)
-    print("\n")
-    for topic in topics:
-        print(topic)
+    topics = ldamodel.show_topics(num_topics=-1, formatted=False)
+    topics = sorted(topics)
+    topic_word_list = []
+    topic_dict = {}
+    for topic_number, topic in topics:
+        list_of_words = []
+        for word, value in topic:
+            list_of_words.append(word)
+        topic_dict[topic_number] = list_of_words
 
-    new_doc = cluster_df.iloc[3]["Title"]
-    new_doc = prepare_text_for_lda(new_doc)
-    new_doc_bow = dictionary.doc2bow(new_doc)
-    print("\n")
-    print(new_doc)
-    print(new_doc_bow)
-    print(ldamodel.get_document_topics(new_doc_bow))
+    df.insert(len(df.columns), "Topic", None)
+    df.insert(len(df.columns), "Topic Keyword", None)
+    df.insert(len(df.columns), "Topic Probability", None)
+    for index, row in df.iterrows():
+        pub_bow = prepare_text_for_lda(row["Title"])
+        pub_bow.extend(prepare_text_for_lda(row["Abstract"]))
+        pub_topics = retrieve_topic_for_doc(pub_bow, ldamodel, dictionary)
+        topic_keywords = "OUTLIER"
+        topic_number = -1
+        topic_probablity = 0
+        if len(pub_topics) > 0:
+            pub_topics.sort(key=lambda x:x[1], reverse=True)
+            topic_keywords = topic_dict[pub_topics[0][0]]
+            topic_number = pub_topics[0][0]
+            topic_probablity = pub_topics[0][1]
+
+        df.at[index, "Topic"] = topic_number
+        df.at[index, "Topic Keyword"] = topic_keywords
+        df.at[index, "Topic Probability"] = topic_probablity
+
+
+    return df

@@ -1,0 +1,63 @@
+@startuml
+!include style.puml
+
+box CreateNetworkFileFunction LOGIC_COLOR_T1
+participant ":Create_Network_File()" as nf LOGIC_COLOR
+end box
+
+box CreateBibCoupleEdges LOGIC_COLOR_T1
+participant ":Create_Bib_Couple_Edges()" as cbc LOGIC_COLOR
+endbox
+
+box TagPubsToClusters LOGIC_COLOR_T1
+participant ":Tag_Pubs_To_Clusters()" as tpc LOGIC_COLOR
+endbox
+
+box LinkRootAndCitePubs LOGIC_COLOR_T1
+participant ":Link_Root_And_Cite_Pubs()" as lrc LOGIC_COLOR
+endbox
+
+box Excel STORAGE_COLOR_T1
+participant ":Excel" as excel STORAGE_COLOR
+end box
+
+[-> nf : analyse("node_dict", alldata_df, \n min_strength=1, cluster_algo=0, \n "savepath")]
+activate nf LOGIC_COLOR
+
+loop for node_id, node in node_dict.items()
+    nf -[LOGIC_COLOR]> cbc : "Create Bibliograph \n Couple Edges"
+    activate cbc LOGIC_COLOR
+    cbc -[LOGIC_COLOR]> cbc : "Create Bibliographic \n Couple Interaction"
+    cbc -[LOGIC_COLOR]> nf : "Return list of interactions"
+    deactivate cbc
+
+    loop for interaction in list of interactions
+        nf -[LOGIC_COLOR]> nf : "Add edges into NetworkX graph"
+    end
+end
+
+nf -[LOGIC_COLOR]> nf : "Cluster by selected clustering algorithm"
+nf -[LOGIC_COLOR]> nf : "Create outlier dataframes for clusters of size 1"
+
+nf -[LOGIC_COLOR]> tpc : "tag_publication_to_clusters(network_df, clusters)"
+activate tpc LOGIC_COLOR
+loop for each cluster
+    tpc -[LOGIC_COLOR]> tpc : "If cluster >= 2 publications \n filter for pub and add to cluster df"
+end
+tpc -[LOGIC_COLOR]> nf
+deactivate tpc
+
+nf -[LOGIC_COLOR]> lrc : "link_root_and_cite_pubs(network_df, clusters)"
+activate lrc LOGIC_COLOR
+loop for each cluster
+    lrc -[LOGIC_COLOR]> lrc : "draw edges from root to \n cited by publications"
+end
+lrc -[LOGIC_COLOR]> nf
+deactivate lrc
+
+nf -[LOGIC_COLOR]> excel : "save network file"
+activate excel STORAGE_COLOR
+excel --[STORAGE_COLOR]> nf
+deactivate excel
+
+@enduml

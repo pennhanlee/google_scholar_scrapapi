@@ -14,11 +14,11 @@ box Excel STORAGE_COLOR_T1
 participant ":Excel" as excel STORAGE_COLOR
 end box
 
-[-> rd : retrieve_doc("machine learning", \n"api_key", \n2010, 2020, \n20, 50 \n "./folder")]
+[-> rd : retrieve_doc("machine learning", \n"api_key", \n2010, 2020, \n20, 50 \n "folder_path")]
 activate rd LOGIC_COLOR
 
 loop for x in range(0, no_of_root_pubs)
-    rd -[LOGIC_COLOR]> serpapi
+    rd -[LOGIC_COLOR]> serpapi : "retrieve_docs()"
     activate serpapi #Grey
     serpapi -[#Grey]> serpapi : "scrap google scholar"
     serpapi --[#Grey]> rd
@@ -38,7 +38,7 @@ loop for x in range(0, no_of_root_pubs)
     end
 end
 
-rd -[LOGIC_COLOR]> excel : "save alldata.xlsx & maindata.xlsx"
+rd -[LOGIC_COLOR]> excel : "save alldata.xlsx"
 activate excel STORAGE_COLOR
 excel --[STORAGE_COLOR]> rd
 deactivate excel

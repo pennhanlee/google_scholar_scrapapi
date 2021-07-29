@@ -16,19 +16,15 @@ box Excel STORAGE_COLOR_T1
 participant ":Excel" as excel STORAGE_COLOR
 end box
 
-[-> da : analyse("./alldata.xlsx", \n"./mainpubs.xlsx", \n2010, 2020, \n20, 50, 1)]
+[-> da : analyse("./alldata.xlsx", "folder_path", \n2010, 2020, \n20, 20, 1, 0)]
 activate da LOGIC_COLOR
 
-da -[LOGIC_COLOR]> excel : "retrieve ./alldata.xlsx \n mainpubs.xlsx"
+da -[LOGIC_COLOR]> excel : "retrieve ./alldata.xlsx"
 activate excel STORAGE_COLOR
 excel --[STORAGE_COLOR]> da
 deactivate excel
 
 da -[LOGIC_COLOR]> da : "create_nodes()"
-da -[LOGIC_COLOR]> nlp : "topic modelling"
-activate nlp MODEL_COLOR
-nlp --[MODEL_COLOR]> da
-deactivate nlp
 
 create cn
 da -[LOGIC_COLOR]> cn
@@ -36,25 +32,42 @@ activate cn LOGIC_COLOR
 cn --[LOGIC_COLOR]> da
 deactivate cn
 
-da -[LOGIC_COLOR]> nlp : "text mining \n cluster name"
-activate nlp MODEL_COLOR
-nlp --[MODEL_COLOR]> da
-deactivate nlp
+loop for cluster in range(0, clusters)
+    create ac
+    da -[LOGIC_COLOR]> ac : create_cluster_indi()
+    activate ac LOGIC_COLOR
+    ac -[LOGIC_COLOR]> nlp : "text mining \n for wordcloud"
+    activate nlp MODEL_COLOR
+    nlp --[MODEL_COLOR]> da
+    deactivate nlp
+    ac -[LOGIC_COLOR]> nlp : "topic modelling"
+    activate nlp MODEL_COLOR
+    nlp --[MODEL_COLOR]> ac
+    deactivate nlp
+    ac -[LOGIC_COLOR]> cm : "create linegraph"
+    activate cm MODEL_COLOR
+    cm --[MODEL_COLOR]> ac
+    deactivate cm
+   
 
-create ac
-da -[LOGIC_COLOR]> ac : "analyse cluster"
-activate ac LOGIC_COLOR
-ac -[LOGIC_COLOR]> cm : "calculate metrics \n create linegraph"
-activate cm MODEL_COLOR
-cm --[MODEL_COLOR]> ac
-deactivate cm
-ac --[LOGIC_COLOR]> da
-deactivate ac
+    ac -[LOGIC_COLOR]> excel : "save clusters"
+    activate excel STORAGE_COLOR
+    excel --[STORAGE_COLOR]> ac
+    deactivate excel
+    ac --[LOGIC_COLOR]> da : return clusters
+    deactivate ac
 
-da -[LOGIC_COLOR]> excel : "save clusters"
-activate excel STORAGE_COLOR
-excel --[STORAGE_COLOR]> da
-deactivate excel
+end
+    activate da LOGIC_COLOR
+    da -[LOGIC_COLOR]> da : create_cluster_sum() \n "to created combined \n cluster metrics"
+    da -[LOGIC_COLOR]> cm : "growth_index(), impact_index(), get_cluster_type()"
+    activate cm MODEL_COLOR
+    cm -[MODEL_COLOR]> da
+    deactivate cm
 
+    da -[LOGIC_COLOR]> excel : "save combined cluster file"
+    activate excel STORAGE_COLOR
+    excel --[STORAGE_COLOR]> da
+    deactivate excel
 
 @enduml

@@ -7,7 +7,7 @@ while() is ([For all nodes])
     : Add edges to node \n based on bibliographic coupling;
     : Add bibliographic couple to networkx graph;
     else 
-    : Add node to graph;
+    : Add orphan node to graph;
     endif
 
 endwhile ([else])
@@ -15,15 +15,15 @@ endwhile ([else])
 
 while() is ([For all clusters])
     if() then ([cluster size larger than 1])
-    : Add cluster number to all node in cluster;
+    : Add cluster number to all publications in cluster;
 
     else
-    : Add single node from cluster to outlier dataframe;
+    : Add publications of clusters with only 1 publication to respective outlier dataframes;
     endif
 
 endwhile([else])
 
-:Save clusters as dataframes;
+:Save network file as an excel sheet;
 :Save recent_outlier and outlier dataframes as excel;
 :Return all cluster dataframes to Data Analysis;
 

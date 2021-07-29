@@ -3,13 +3,13 @@
 start
 :User start analysis;
 
-:Retrieve alldata.xlsx & mainpubs.xlsx;
+:Retrieve alldata.xlsx file;
 
-:Create nodes;
+:Create publication nodes;
 
 :Create network graph;
 
-:Cluster nodes and assign cluster names;
+:Cluster publications and assign cluster names;
 
 :Analyse cluster metrics;
 

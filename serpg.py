@@ -17,7 +17,7 @@ SAVE_PATH = "./data/"
 CURRENT_TIME_STRING = datetime.now().strftime("%d-%m-%Y_%H%M")
 
 
-def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_limit, offset):
+def retrieve_docs(topic, key, min_year, max_year, num_to_retrieve, citation_limit, offset):
     ''' Retrieves publications of a topic in Google Scholar through the SERPAPI
     as well as the publications that cite this publication for 1 iteration.
     To be used together with GUI for GUI to track each iteration for UX feature
@@ -86,13 +86,16 @@ def retrieve_docs_2(topic, key, min_year, max_year, num_to_retrieve, citation_li
             total_cites = entry["inline_links"].get("cited_by").get("total") if "cited_by" in entry["inline_links"] else 0
             result_id = entry["result_id"]
 
+            if citation_limit < 0:
+                citation_limit = total_cites
+
             node_data, citing_result_id = retrieve_citing_pub(result_id, cite_id, min_year, max_year, citation_limit, key)
             alldata_df_entry = Node(title, year, snippet, authors, authors_id, hyperlink, cite_id, total_cites, result_id, "Root Publication", citing_pub_id=citing_result_id)
 
             alldata_dict[result_id] = alldata_df_entry
             if result_id in node_data:
-                node_data.pop(result_id)
-            alldata_dict.update(node_data)  #Need to make sure it doesnt update the Root Publications
+                node_data.pop(result_id)    
+            alldata_dict.update(node_data)
         rootpub_counter = len(result_list)
             
     return alldata_dict, rootpub_counter
@@ -130,7 +133,6 @@ def retrieve_citing_pub(root_pub_id, cites_id, min_year, max_year, citation_limi
 
     node_data = {}
     result_id_list = []
-    # result_list = []
     total_retrieved = 0
     while (total_retrieved < citation_limit):
         if cites_id == "Empty":
@@ -160,7 +162,6 @@ def retrieve_citing_pub(root_pub_id, cites_id, min_year, max_year, citation_limi
                 total_cites = doc["inline_links"].get("cited_by").get("total") if "cited_by" in doc["inline_links"] else 0
                 result_id = doc["result_id"]
                 node = Node(title, year, snippet, authors, authors_id, hyperlink, cite_id, total_cites, result_id, "Citing Publication", cites=root_pub_id)
-                # node_in_list_form = [title, year, snippet, authors, authors_id, hyperlink, cites_id, total_cites, result_id, "Citing Publication", ""]
                 node_data[result_id] = node
                 result_id_list.append(result_id)
             total_retrieved += len(results["organic_results"])
@@ -232,11 +233,19 @@ def add_to_df(df, pub_dict):
             df_entry = publication
             df.loc[len(df.index)] = df_entry
         else:
-            pub_in_df = df.loc[(df["Result_id"] == pub_id)][0]
-            if (pub_in_df["Type of Pub"] == "Citing Publication" and pub.type == "Root Publication"):
+            pub_in_df = df.loc[(df["Result_id"] == pub_id)]
+            specific_pub = pub_in_df.iloc[0]
+            # print(pub.type)
+            if (pub.type == "Root Publication"):
+                print("Here Too")
                 pub_in_df["Type of Pub"] = "Root Publication"
-                pub_in_df["Citing_pubs_id"] = pub.citing_pub_id
+                pub_in_df["Citing_pubs_id"] = pub_in_df["Citing_pubs_id"] + ";" + pub.citing_pub_id
                 pub_in_df["Cites"] = pub_in_df["Cites"] + ";" + pub.cites
+                print(pub_in_df)
+            else:
+                pub_in_df["Cites"] = pub_in_df["Cites"] + ";" + pub.cites
+                df.loc[(df["Result_id"] == pub_id), "Cites"] = pub_in_df["Cites"] + ";" + pub.cites
+                print(pub_in_df)
                 
     return df
 
@@ -256,6 +265,3 @@ def getKey():
     json_file.close()
     return key
 
-
-if __name__ == "__main__":
-    main()
