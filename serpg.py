@@ -86,7 +86,7 @@ def retrieve_docs(topic, key, min_year, max_year, num_to_retrieve, citation_limi
             total_cites = entry["inline_links"].get("cited_by").get("total") if "cited_by" in entry["inline_links"] else 0
             result_id = entry["result_id"]
 
-            if citation_limit < 0:
+            if citation_limit <= 0:
                 citation_limit = total_cites
 
             node_data, citing_result_id = retrieve_citing_pub(result_id, cite_id, min_year, max_year, citation_limit, key)
