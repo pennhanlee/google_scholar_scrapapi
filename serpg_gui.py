@@ -694,7 +694,6 @@ def retrieval_of_data(savepath, topic, key, min_year, max_year, limit, citation_
             
             num_to_retrieve = 20 if remainder >= 20 else remainder
             alldata, retrieved_counter = serpg.retrieve_docs(topic, key, min_year, max_year, num_to_retrieve, citation_limit, total_retrieved)
-            
             total_retrieved += retrieved_counter
             alldata_df = serpg.add_to_df(alldata_df, alldata)
 

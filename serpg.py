@@ -90,12 +90,24 @@ def retrieve_docs(topic, key, min_year, max_year, num_to_retrieve, citation_limi
                 citation_limit = total_cites
 
             node_data, citing_result_id = retrieve_citing_pub(result_id, cite_id, min_year, max_year, citation_limit, key)
-            alldata_df_entry = Node(title, year, snippet, authors, authors_id, hyperlink, cite_id, total_cites, result_id, "Root Publication", citing_pub_id=citing_result_id)
+            root_pub_entry = Node(title, year, snippet, authors, authors_id, hyperlink, cite_id, total_cites, result_id, "Root Publication", citing_pub_id=citing_result_id)
 
-            alldata_dict[result_id] = alldata_df_entry
-            if result_id in node_data:
-                node_data.pop(result_id)    
-            alldata_dict.update(node_data)
+            if result_id in node_data.keys():    #If root cites itself, update the entries
+                duplicate_node = node_data[result_id]
+                duplicate_node.citing_pub_id = duplicate_node.citing_pub_id + ";" + root_pub_entry.citing_pub_id
+                duplicate_node.cites = duplicate_node.cites + ";" + root_pub_entry.cites
+                duplicate_node.pub_type = root_pub_entry.pub_type
+            else:
+                node_data[result_id] = root_pub_entry
+
+            for pub_id, pub in node_data.items():
+                if pub_id in alldata_dict.keys():
+                    duplicate_node = alldata_dict[pub_id]
+                    duplicate_node.citing_pub_id = duplicate_node.citing_pub_id + ";" + pub.citing_pub_id
+                    if pub.type == "Root Publication":
+                        duplicate_node.type = "Root Publication"
+                else:
+                    alldata_dict[pub_id] = pub
         rootpub_counter = len(result_list)
             
     return alldata_dict, rootpub_counter
@@ -154,6 +166,7 @@ def retrieve_citing_pub(root_pub_id, cites_id, min_year, max_year, citation_limi
         if ("organic_results" in results):
             # result_list += results["organic_results"]
             for doc in results['organic_results']:
+                
                 title = doc["title"]
                 snippet = doc["snippet"] if "snippet" in doc else "Empty"
                 cite_id = doc["inline_links"].get("cited_by").get("cites_id") if "cited_by" in doc["inline_links"] else "Empty"
@@ -229,15 +242,16 @@ def add_to_df(df, pub_dict):
         publication = [pub.title, pub.year, pub.abstract, pub.authors, 
                         pub.author_id, pub.hyperlink, pub.cite_id, 
                         pub.cite_count, pub.result_id, pub.type , pub.citing_pub_id, pub.cites]
+        if pub.cite_id == "pdcI9r5sCJcJ":
+            print(pub.type)
         if (df.loc[(df['Result_id'] == pub_id)].empty):  # avoiding duplicates
             df_entry = publication
             df.loc[len(df.index)] = df_entry
         else:
             pub_in_df = df.loc[(df["Result_id"] == pub_id)]
+            print(pub_id)
             specific_pub = pub_in_df.iloc[0]
-            # print(pub.type)
             if (pub.type == "Root Publication"):
-                print("Here Too")
                 pub_in_df["Type of Pub"] = "Root Publication"
                 pub_in_df["Citing_pubs_id"] = pub_in_df["Citing_pubs_id"] + ";" + pub.citing_pub_id
                 pub_in_df["Cites"] = pub_in_df["Cites"] + ";" + pub.cites
